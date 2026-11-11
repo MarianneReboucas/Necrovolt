@@ -1,5 +1,6 @@
 import './style.css';
-import { SceneManager } from './rendering/SceneManager';
+import * as THREE from 'three';
+import { SceneManager, isMobileDevice } from './rendering/SceneManager';
 import { Environment } from './environment/Environment';
 import { Player } from './entities/Player';
 import { ZombieManager } from './entities/ZombieManager';
@@ -338,12 +339,67 @@ class Game {
 
       // 3. Mira e Movimentação (1ª Pessoa nos Olhos vs 3ª Pessoa Isométrica)
       const isFP = this.cameraMode === 'first_person';
-      const aimTarget = isFP
+      let aimTarget = isFP
         ? this.sceneManager.getFirstPersonAimTarget(this.player.getPosition())
         : this.sceneManager.screenToWorldPoint(
             this.inputManager.rawScreen.x,
             this.inputManager.rawScreen.y
           );
+
+      // AUTO-AIM INTELIGENTE (Prioritário em Celular / Toque / Botão de Tiro Tátil)
+      if (!isFP) {
+        const isShootingMobile = this.inputManager.isTouchFiring;
+        const isMovingTouch = this.inputManager.touchMoveVector.x !== 0 || this.inputManager.touchMoveVector.z !== 0;
+
+        if (isShootingMobile || isMovingTouch || isMobileDevice()) {
+          const playerPos = this.player.getPosition();
+          const aliveZombies = this.zombieManager.getAliveZombies();
+
+          if (aliveZombies.length > 0) {
+            let closestZombie: any = null;
+            let minDistSq = 28 * 28; // Raio de alcance de mira assistida (28m)
+
+            for (let zIdx = 0; zIdx < aliveZombies.length; zIdx++) {
+              const z = aliveZombies[zIdx];
+              const distSq = playerPos.distanceToSquared(z.group.position);
+              if (distSq < minDistSq) {
+                minDistSq = distSq;
+                closestZombie = z;
+              }
+            }
+
+            if (closestZombie && isShootingMobile) {
+              // Ao disparar no celular, crava a mira diretamente no centro de massa do zumbi mais próximo
+              aimTarget = new THREE.Vector3(
+                closestZombie.group.position.x,
+                0,
+                closestZombie.group.position.z
+              );
+            } else if (closestZombie && minDistSq < 15 * 15) {
+              // Se um zumbi estiver perigosamente próximo (15m), vira o sobrevivente para a ameaça iminente
+              aimTarget = new THREE.Vector3(
+                closestZombie.group.position.x,
+                0,
+                closestZombie.group.position.z
+              );
+            } else if (isMovingTouch) {
+              // Mira na direção em que o jogador está correndo pelo joystick
+              aimTarget = new THREE.Vector3(
+                playerPos.x + this.inputManager.touchMoveVector.x * 12,
+                0,
+                playerPos.z + this.inputManager.touchMoveVector.z * 12
+              );
+            }
+          } else if (isMovingTouch) {
+            aimTarget = new THREE.Vector3(
+              playerPos.x + this.inputManager.touchMoveVector.x * 12,
+              0,
+              playerPos.z + this.inputManager.touchMoveVector.z * 12
+            );
+          }
+        }
+      }
+
       const moveInput = this.inputManager.getMovementVector();
       const isRunning = this.inputManager.isRunning();
       this.player.update(

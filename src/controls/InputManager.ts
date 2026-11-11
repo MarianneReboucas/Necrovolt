@@ -175,11 +175,13 @@ export class InputManager {
         e.preventDefault();
         e.stopPropagation();
         this.isTouchFiring = true;
+        btnShoot.classList.add('active');
       };
       const stopShoot = (e: Event) => {
         e.preventDefault();
         e.stopPropagation();
         this.isTouchFiring = false;
+        btnShoot.classList.remove('active');
       };
 
       btnShoot.addEventListener('touchstart', startShoot, { passive: false });
@@ -272,13 +274,12 @@ export class InputManager {
       dpadRing.addEventListener('touchcancel', resetDpad);
     }
 
-    // 6. Toque na tela para girar visão em 1ª Pessoa no Celular
+    // 6. Toque na tela para mirar ou girar visão (1ª Pessoa vs 3ª Pessoa Top-Down)
     let touchLookStartX = 0;
     let touchLookStartY = 0;
     let isTouchLooking = false;
 
     window.addEventListener('touchstart', (e) => {
-      if (!this.isFirstPerson) return;
       for (let i = 0; i < e.touches.length; i++) {
         const t = e.touches[i];
         const target = t.target as HTMLElement;
@@ -289,16 +290,21 @@ export class InputManager {
           !target.closest('.hud-top-right') &&
           !target.closest('.hud-top-left-portrait')
         ) {
-          touchLookStartX = t.clientX;
-          touchLookStartY = t.clientY;
-          isTouchLooking = true;
+          if (this.isFirstPerson) {
+            touchLookStartX = t.clientX;
+            touchLookStartY = t.clientY;
+            isTouchLooking = true;
+          } else {
+            // Em 3ª pessoa: Atualiza a mira diretamente para o ponto tocado no campo de batalha
+            this.rawScreen.x = t.clientX;
+            this.rawScreen.y = t.clientY;
+          }
           break;
         }
       }
     }, { passive: true });
 
     window.addEventListener('touchmove', (e) => {
-      if (!this.isFirstPerson || !isTouchLooking) return;
       for (let i = 0; i < e.touches.length; i++) {
         const t = e.touches[i];
         const target = t.target as HTMLElement;
@@ -306,15 +312,21 @@ export class InputManager {
           !target.closest('.mobile-dpad-container') &&
           !target.closest('.action-buttons-cluster') &&
           !target.closest('.modal-overlay') &&
-          !target.closest('.hud-top-right')
+          !target.closest('.hud-top-right') &&
+          !target.closest('.hud-top-left-portrait')
         ) {
-          const dx = t.clientX - touchLookStartX;
-          const dy = t.clientY - touchLookStartY;
-          touchLookStartX = t.clientX;
-          touchLookStartY = t.clientY;
-          const sens = 0.0055;
-          this.fpYaw -= dx * sens;
-          this.fpPitch = Math.max(-1.15, Math.min(1.15, this.fpPitch - dy * sens));
+          if (this.isFirstPerson && isTouchLooking) {
+            const dx = t.clientX - touchLookStartX;
+            const dy = t.clientY - touchLookStartY;
+            touchLookStartX = t.clientX;
+            touchLookStartY = t.clientY;
+            const sens = 0.0055;
+            this.fpYaw -= dx * sens;
+            this.fpPitch = Math.max(-1.15, Math.min(1.15, this.fpPitch - dy * sens));
+          } else if (!this.isFirstPerson) {
+            this.rawScreen.x = t.clientX;
+            this.rawScreen.y = t.clientY;
+          }
           break;
         }
       }
