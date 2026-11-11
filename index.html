@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>NECROVOLT - Sobrevivência Pós-Apocalíptica 2D Top-Down</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700;800;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="bg-canvas"></canvas>
+
+      <!-- TELA INICIAL: NECROVOLT -->
+      <div id="start-screen" class="start-screen-overlay">
+        <!-- Topo com Status de Economia e XP do Jogador -->
+        <div class="menu-top-bar">
+          <div class="player-profile-pill">
+            <span id="menu-player-level" class="badge-level-highlight">NVL 1</span>
+            <span id="menu-player-xp" class="text-xp-progress">0 / 120 XP</span>
+          </div>
+          <div class="player-wallet-pill">
+            <span class="wallet-icon">💰</span>
+            <span id="menu-player-coins" class="wallet-amount highlight-yellow">250 🪙</span>
+          </div>
+          <button id="btn-menu-audio" class="audio-toggle-btn" title="Alternar Áudio">🔊</button>
+        </div>
+
+        <div class="brand-container">
+          <div class="radiation-badge">
+            <span class="pulse-indicator"></span> ZONA DE QUARENTENA 07
+          </div>
+          <h1 class="game-logo">NECRO<span class="highlight-lime">VOLT</span></h1>
+        </div>
+
+        <nav class="main-menu-nav">
+          <button id="btn-play" class="menu-btn menu-btn-primary">
+            <span class="btn-icon">⚡</span>
+            <span id="btn-play-text" class="btn-text">INICIAR EXPEDIÇÃO</span>
+          </button>
+          <button id="btn-stages" class="menu-btn">
+            <span class="btn-icon">🗺️</span>
+            <span class="btn-text">SELECIONAR NÍVEL / VOLTAR FASES</span>
+          </button>
+          <button id="btn-custom" class="menu-btn">
+            <span class="btn-icon">🧥</span>
+            <span class="btn-text">PERSONALIZAÇÃO 2D</span>
+          </button>
+          <button id="btn-shop" class="menu-btn">
+            <span class="btn-icon">📦</span>
+            <span class="btn-text">LOJA DE ARMAS & UPGRADES</span>
+          </button>
+          <button id="btn-achievements" class="menu-btn">
+            <span class="btn-icon">🏆</span>
+            <span class="btn-text">CONQUISTAS DO PERFIL</span>
+          </button>
+          <button id="btn-settings" class="menu-btn">
+            <span class="btn-icon">⚙️</span>
+            <span class="btn-text">CONFIGURAÇÕES</span>
+          </button>
+        </nav>
+
+        <div class="menu-footer-hint">
+          <!-- Guia de Controles do Computador (exibido apenas na tela inicial do PC) -->
+          <div class="desktop-controls-hint-menu">
+            <div class="hint-tag"><span class="key-badge">WASD</span> Mover</div>
+            <div class="hint-tag"><span class="key-badge">CTRL / ESPAÇO</span> Correr</div>
+            <div class="hint-tag"><span class="key-badge">F2 / F3</span> 1ª / 3ª Pessoa</div>
+            <div class="hint-tag"><span class="key-badge">MOUSE</span> Mirar</div>
+            <div class="hint-tag"><span class="key-badge">L-CLICK</span> Atirar</div>
+            <div class="hint-tag"><span class="key-badge">R</span> Recarregar</div>
+            <div class="hint-tag"><span class="key-badge">1 - 8</span> Armas</div>
+            <div class="hint-tag"><span class="key-badge">Q / E</span> Trocar</div>
+            <div class="hint-tag"><span class="key-badge">ESC</span> Pausar</div>
+          </div>
+
+          <div class="status-pill">
+            <span class="dot-online"></span> SALVAMENTO VERSIONADO V2 • 6 SKINS DISPONÍVEIS
+          </div>
+        </div>
+      </div>
+
+      <!-- HUD EM JOGO (ESTILO EXATO DA IMAGEM DE REFERÊNCIA) -->
+      <div id="hud" class="hidden">
+        <!-- Barra de Vida e Energia no Canto Superior Esquerdo -->
+        <div class="hud-top-left-portrait">
+          <div class="player-avatar-circle">
+            <span class="avatar-face">🤠</span>
+          </div>
+          <div class="energy-pill-container">
+            <div class="energy-bolt-icon">⚡</div>
+            <div class="energy-bar-wrap">
+              <div id="hp-bar-fill" class="energy-bar-fill"></div>
+            </div>
+            <span id="hp-text" class="hp-numeric-label">100 / 100</span>
+          </div>
+        </div>
+
+        <!-- Indicador de Cristais / Kills, Tempo e Botão Pausa no Canto Superior Direito -->
+        <div class="hud-top-right">
+          <div class="crystal-counter-pill">
+            <span class="crystal-icon">💎</span>
+            <span id="kill-count" class="crystal-numbers">0</span>
+            <span class="crystal-total">/ <span id="mission-progress">15</span></span>
+          </div>
+          <div id="game-clock-time" class="hud-timer-badge">02:34</div>
+          <button id="btn-hud-camera" class="btn-pause-tactile" title="Alternar Câmera (F2: 1ªP / F3: 3ªP)" style="margin-right: 6px;">
+            <span id="hud-camera-icon">👁️ 3ªP</span>
+          </button>
+          <button id="btn-hud-audio" class="btn-pause-tactile" title="Alternar Áudio" style="margin-right: 6px;">
+            <span>🔊</span>
+          </button>
+          <button id="btn-hud-pause" class="btn-pause-tactile" title="Pausar Jogo">
+            <span class="pause-bars">❚❚</span>
+          </button>
+        </div>
+
+        <!-- MIRA FPS EM PRIMEIRA PESSOA -->
+        <div id="fps-crosshair" class="fps-crosshair hidden">
+          <div class="crosshair-line vertical"></div>
+          <div class="crosshair-line horizontal"></div>
+          <div class="crosshair-center-dot"></div>
+        </div>
+
+        <!-- Ocultos tecnicamente mas mantidos para compatibilidade com os scripts existentes -->
+        <div class="hidden-metadata-holders" style="display: none;">
+          <span id="stage-title">SETOR 01: CRUZAMENTO ABANDONADO</span>
+          <span id="weapon-name">Pistola Tática 9mm</span>
+          <span id="ammo-count">12 / 12</span>
+          <span id="reload-warning">RECARREGANDO</span>
+        </div>
+
+        <!-- D-Pad Virtual de Movimentação no Canto Inferior Esquerdo (Apenas Celular) -->
+        <div class="mobile-dpad-container">
+          <div class="dpad-outer-ring">
+            <div class="dpad-arrow dpad-up">▲</div>
+            <div class="dpad-arrow dpad-down">▼</div>
+            <div class="dpad-arrow dpad-left">◀</div>
+            <div class="dpad-arrow dpad-right">▶</div>
+            <div class="dpad-center-knob"></div>
+          </div>
+        </div>
+
+        <!-- Botões de Ação no Canto Inferior Direito (Apenas Celular) -->
+        <div class="action-buttons-cluster">
+          <button id="btn-action-ability" class="action-btn-circle btn-ability" title="Recarregar Arma">
+            <span class="act-icon">🔄</span>
+            <span class="act-key-tag">R</span>
+          </button>
+          <button id="btn-action-backpack" class="action-btn-circle btn-backpack" title="Trocar Arma">
+            <span class="act-icon">🎒</span>
+            <span class="act-key-tag">Q</span>
+          </button>
+          <button id="btn-action-run" class="action-btn-circle btn-run-mobile" title="Correr">
+            <span class="act-icon">🏃</span>
+          </button>
+          <button id="btn-action-dash" class="action-btn-circle btn-sprint-primary" title="Atirar / Disparar">
+            <span class="act-icon-large">🎯</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MODAL: MAPA DE OPERAÇÕES TÁTICAS (SELEÇÃO DE FASES / RETORNO A NÍVEIS ANTERIORES) -->
+      <div id="stages-map-modal" class="modal-overlay hidden">
+        <div class="modal-card stages-map-card">
+          <div class="modal-header">
+            <div>
+              <h2 class="title">MAPA DE OPERAÇÕES TÁTICAS</h2>
+              <p class="description">SELECIONE QUALQUER NÍVEL JÁ CONQUISTADO OU RETORNE A UMA FASE ANTERIOR</p>
+            </div>
+            <button class="btn-modal-close-icon btn-close-modal" data-close="stages-map-modal" title="Fechar Mapa">✕</button>
+          </div>
+          <div class="map-network-viewport">
+            <div id="stages-nodes-grid" class="stages-nodes-container"></div>
+          </div>
+          <div class="stage-preview-footer-panel">
+            <div class="stage-footer-info">
+              <span id="map-selected-tier" class="stage-tag-badge">TIER 1 • O INÍCIO DO SURTO</span>
+              <h3 id="map-selected-title" class="map-stage-name">SETOR 01 • RUAS DESOLADAS</h3>
+              <p id="map-selected-desc" class="map-stage-sub">Meta: 10 zumbis • Recompensa: +100 XP • +50 🪙</p>
+            </div>
+            <div style="display: flex; gap: 0.8rem; align-items: center;">
+              <button class="btn-secondary btn-close-modal" data-close="stages-map-modal" style="padding: 0.85rem 1.4rem;">VOLTAR</button>
+              <button id="btn-launch-expedition" class="btn-primary btn-launch-stage">JOGAR ESTE NÍVEL ➔</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: PERSONALIZAÇÃO 2D DO SOBREVIVENTE -->
+      <div id="custom-modal" class="modal-overlay hidden">
+        <div class="modal-card custom-modal-card">
+          <div class="modal-header">
+            <div class="custom-header-row">
+              <div>
+                <h2 class="title">OFICINA DE PERSONALIZAÇÃO TÁTICA</h2>
+                <p class="description">Selecione e equipe os trajes de sobrevivência do seu personagem.</p>
+              </div>
+              <button class="btn-modal-close-icon btn-close-modal" data-close="custom-modal" title="Fechar visualização">✕</button>
+            </div>
+          </div>
+
+          <div class="custom-content-grid">
+            <!-- Coluna Esquerda: Vitrine 2D do Sobrevivente -->
+            <div class="preview-canvas-wrapper">
+              <div class="preview-badge-3d">SOBREVIVENTE • VISUAL EM 2D</div>
+              <canvas id="preview-2d-canvas" width="280" height="340"></canvas>
+            </div>
+
+            <!-- Coluna Direita: Detalhes da Skin e Lista de Opções -->
+            <div class="custom-skins-selection">
+              <div class="custom-selected-details">
+                <h3 id="custom-skin-title">Sobrevivente Urbano</h3>
+                <p id="custom-skin-desc">Jaqueta clássica de sobrevivência com boné e óculos táticos.</p>
+                <button id="btn-custom-action" class="btn-primary">EQUIPAR VISUAL</button>
+              </div>
+
+              <div class="custom-list-label">TRAJES DE SOBREVIVÊNCIA DISPONÍVEIS:</div>
+              <div id="custom-skins-list" class="skins-list-container">
+                <!-- Preenchido via TypeScript com as 6 skins -->
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions-footer">
+            <button class="btn-primary btn-close-modal" data-close="custom-modal">FECHAR & VOLTAR</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: CONQUISTAS DO PERFIL -->
+      <div id="achievements-modal" class="modal-overlay hidden">
+        <div class="modal-card achievements-modal-card">
+          <div class="modal-header">
+            <h2 class="title">CONQUISTAS DA QUARENTENA</h2>
+            <p class="description">Cumpra missões para receber moedas, XP e skins exclusivas.</p>
+          </div>
+          <div id="achievements-list-container" class="achievements-grid">
+            <!-- Preenchido dinamicamente via TypeScript -->
+          </div>
+          <div class="modal-actions-footer">
+            <button class="btn-primary btn-close-modal" data-close="achievements-modal">FECHAR</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: LOJA DE SOBREVIVÊNCIA -->
+      <div id="shop-modal" class="modal-overlay hidden">
+        <div class="modal-card shop-modal-card">
+          <div class="modal-header">
+            <div class="shop-header-row">
+              <div>
+                <h2 class="title">POSTO DE SUPRIMENTOS DO MERCADO NEGRO</h2>
+                <p class="description">Armamentos de fogo pesados e aprimoramentos permanentes.</p>
+              </div>
+              <div class="shop-balance-badge">
+                <span>SEU SALDO:</span>
+                <strong id="shop-coins-display" class="highlight-yellow">250 🪙</strong>
+              </div>
+            </div>
+
+            <div id="shop-feedback" class="shop-feedback-toast hidden"></div>
+
+            <div class="shop-tabs-nav">
+              <button class="shop-tab-btn active" data-tab="weapons">🔫 ARMAS DE FOGO</button>
+              <button class="shop-tab-btn" data-tab="upgrades">⚡ MELHORIAS PERMANENTES</button>
+            </div>
+          </div>
+
+          <div id="shop-items-container" class="shop-items-grid"></div>
+
+          <div class="shop-modal-footer">
+            <button class="btn-primary btn-close-modal" data-close="shop-modal">CONCLUÍDO & FECHAR</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: FASE CONCLUÍDA (TELA DE RESULTADOS) -->
+      <div id="stage-clear-modal" class="modal-overlay hidden">
+        <div class="modal-card clear-card">
+          <div class="modal-header">
+            <span class="radiation-badge victory-badge">SETOR PURIFICADO</span>
+            <h2 class="title victory-title">OBJETIVO CUMPRIDO!</h2>
+            <p id="result-stage-name" class="description">Setor 01: Cruzamento Abandonado</p>
+          </div>
+          <div class="end-stats-box">
+            <div class="stat-line"><span>Zumbis Eliminados:</span> <strong id="result-kills" class="highlight-lime">15 / 15</strong></div>
+            <div class="stat-line"><span>Tempo no Setor:</span> <strong id="result-time">00:45</strong></div>
+            <div class="stat-line"><span>XP Conquistado:</span> <strong id="result-xp" class="highlight-cyan">+150 XP</strong></div>
+            <div class="stat-line"><span>Moedas de Sucata:</span> <strong id="result-coins" class="highlight-yellow">+50 Moedas</strong></div>
+          </div>
+          <div id="result-achievements-box" class="result-achievements-container hidden"></div>
+          <button id="btn-next-stage" class="btn-primary">AVANÇAR PARA A PRÓXIMA FASE ➔</button>
+        </div>
+      </div>
+
+      <!-- MODAL: MENU DE PAUSA -->
+      <div id="pause-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h2 class="title">EXPEDIÇÃO PAUSADA</h2>
+            <p class="description">O surgimento de infectados está suspenso temporariamente.</p>
+          </div>
+          <div class="pause-actions">
+            <button id="btn-resume" class="btn-primary">CONTINUAR COMBATE</button>
+            <button id="btn-pause-menu" class="btn-subtle">SAIR PARA O MENU</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: GAME OVER -->
+      <div id="game-over-modal" class="modal-overlay hidden">
+        <div class="modal-card death-card">
+          <div class="modal-header">
+            <span class="radiation-badge danger-badge">SINAL VITAL PERDIDO</span>
+            <h2 class="title death-title">VOCÊ FOI INFECTADO</h2>
+            <p class="description">As hordas superaram suas defesas neste setor.</p>
+          </div>
+          <div class="end-stats-box">
+            <div class="stat-line"><span>Eliminações na Rodada:</span> <strong id="gameover-kills" class="highlight-lime">0</strong></div>
+            <div class="stat-line"><span>Tempo Sobrevivido:</span> <strong id="gameover-time">00:00</strong></div>
+          </div>
+          <div class="modal-actions-row">
+            <button id="btn-restart-game" class="btn-primary">TENTAR NOVAMENTE</button>
+            <button id="btn-gameover-menu" class="btn-subtle">MENU PRINCIPAL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: VITÓRIA TOTAL DA CAMPANHA -->
+      <div id="victory-modal" class="modal-overlay hidden">
+        <div class="modal-card victory-card">
+          <div class="modal-header">
+            <span class="radiation-badge victory-badge">ZONA DE QUARENTENA EXPURGADA</span>
+            <h2 class="title victory-title">VITÓRIA TOTAL!</h2>
+            <p class="description">Você aniquilou o Colosso Necrótico Supremo e sobreviveu a todos os 20 setores da quarentena!</p>
+          </div>
+          <div class="end-stats-box">
+            <div class="stat-line"><span>Total de Infectados Abatidos:</span> <strong id="victory-kills" class="highlight-lime">70</strong></div>
+            <div class="stat-line"><span>Tempo Total da Campanha:</span> <strong id="victory-time">00:00</strong></div>
+            <div class="stat-line"><span id="victory-rewards" class="highlight-yellow">Recompensas completadas</span></div>
+          </div>
+          <div class="modal-actions-row">
+            <button id="btn-victory-restart" class="btn-primary">JOGAR NOVO CICLO (FASE 01)</button>
+            <button id="btn-victory-menu" class="btn-subtle">MENU PRINCIPAL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: CONFIGURAÇÕES -->
+      <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h2 class="title">CONFIGURAÇÕES DE SISTEMA</h2>
+            <p class="description">Ajustes de áudio, volume e preferências de jogo.</p>
+          </div>
+          <div class="settings-list">
+            <!-- Controle de Volume Geral -->
+            <div class="setting-row volume-setting-row">
+              <div class="setting-label-group">
+                <span class="setting-title">🔊 Volume Geral</span>
+                <span id="volume-master-val" class="volume-val-badge">85%</span>
+              </div>
+              <div class="volume-slider-wrapper">
+                <input type="range" id="settings-volume-master" class="volume-slider" min="0" max="100" value="85" />
+              </div>
+            </div>
+
+            <!-- Volume dos Tiros & Efeitos -->
+            <div class="setting-row volume-setting-row">
+              <div class="setting-label-group">
+                <span class="setting-title">💥 Volume dos Tiros & Efeitos</span>
+                <span id="volume-sfx-val" class="volume-val-badge">90%</span>
+              </div>
+              <div class="volume-slider-wrapper">
+                <input type="range" id="settings-volume-sfx" class="volume-slider" min="0" max="100" value="90" />
+              </div>
+            </div>
+
+            <!-- Volume da Trilha Sonora -->
+            <div class="setting-row volume-setting-row">
+              <div class="setting-label-group">
+                <span class="setting-title">🎵 Volume da Música</span>
+                <span id="volume-music-val" class="volume-val-badge">65%</span>
+              </div>
+              <div class="volume-slider-wrapper">
+                <input type="range" id="settings-volume-music" class="volume-slider" min="0" max="100" value="65" />
+              </div>
+            </div>
+
+            <!-- Perspectiva da Câmera (1ª Pessoa vs 3ª Pessoa - F2 / F3) -->
+            <div class="setting-row">
+              <div class="setting-label-group">
+                <span class="setting-title">🎥 Visão da Câmera</span>
+                <span style="font-size: 0.72rem; color: #94a3b8;">F2: 1ª Pessoa • F3: 3ª Pessoa</span>
+              </div>
+              <div class="camera-mode-toggles" style="display: flex; gap: 8px;">
+                <button id="btn-camera-third" class="camera-mode-btn active-mode">3ª PESSOA (ISOMÉTRICA)</button>
+                <button id="btn-camera-first" class="camera-mode-btn">1ª PESSOA (FPS)</button>
+              </div>
+            </div>
+
+            <!-- Botão de Mutar / Desmutar Rápido -->
+            <div class="setting-row">
+              <span>Áudio de Terror & Efeitos</span>
+              <button id="btn-settings-audio-toggle" class="badge-status" style="cursor: pointer; border: none;">ATIVADO</button>
+            </div>
+
+            <div class="setting-row">
+              <span>Rastreador de Conquistas e Desafios</span>
+              <span class="badge-status">ATIVADO</span>
+            </div>
+
+            <div class="setting-row">
+              <span>Persistência Local (LocalStorage v2)</span>
+              <span class="badge-status">ATIVADO</span>
+            </div>
+          </div>
+          <button class="btn-primary btn-close-modal" data-close="settings-modal">SALVAR & VOLTAR</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
