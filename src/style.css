@@ -1902,4 +1902,309 @@ html, body {
   z-index: 100;
 }
 
+/* ==========================================================================
+   ETAPA 2: RESPONSIVIDADE TOTAL PARA DISPOSITIVOS MÓVEIS (TABLETS & SMARTPHONES)
+   Suporta modo Retrato (Portrait) e Paisagem (Landscape) com Safe Areas
+   ========================================================================== */
+
+@media (max-width: 860px), (pointer: coarse) {
+  /* 1. Tela Inicial e Menus */
+  .start-screen-overlay {
+    padding: max(1.2rem, env(safe-area-inset-top)) max(1.2rem, env(safe-area-inset-right)) max(1.2rem, env(safe-area-inset-bottom)) max(1.2rem, env(safe-area-inset-left));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .menu-top-bar {
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: center;
+  }
+
+  .player-profile-pill, .player-wallet-pill {
+    padding: 0.35rem 0.8rem;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+  }
+
+  .wallet-amount {
+    font-size: 0.95rem;
+  }
+
+  .brand-container {
+    align-items: center;
+    text-align: center;
+    margin: 0.6rem 0;
+  }
+
+  .game-logo {
+    font-size: clamp(2.3rem, 8vw, 3.4rem);
+    letter-spacing: 0.04em;
+  }
+
+  .radiation-badge {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.6rem;
+  }
+
+  .main-menu-nav {
+    width: 100%;
+    max-width: 340px;
+    margin: 0.6rem auto;
+    gap: 0.65rem;
+  }
+
+  .menu-btn {
+    padding: 0.75rem 1.1rem;
+    font-size: 0.95rem;
+    gap: 0.8rem;
+  }
+
+  .menu-footer-hint {
+    justify-content: center;
+    margin-top: 0.6rem;
+  }
+
+  .status-pill {
+    font-size: 0.72rem;
+    text-align: center;
+  }
+
+  /* 2. HUD Em Jogo */
+  #hud {
+    padding: 0;
+  }
+
+  .hud-top-left-portrait {
+    top: max(0.7rem, env(safe-area-inset-top));
+    left: max(0.8rem, env(safe-area-inset-left));
+    gap: 0.5rem;
+  }
+
+  .player-avatar-circle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .avatar-face {
+    font-size: 1.4rem;
+  }
+
+  .energy-pill-container {
+    padding: 0.2rem 0.6rem 0.2rem 0.3rem;
+    gap: 0.45rem;
+  }
+
+  .energy-bolt-icon {
+    width: 22px;
+    height: 22px;
+    font-size: 0.75rem;
+  }
+
+  .energy-bar-wrap {
+    width: 95px;
+    height: 11px;
+  }
+
+  .hp-numeric-label {
+    font-size: 0.68rem;
+  }
+
+  .hud-top-right {
+    top: max(0.7rem, env(safe-area-inset-top));
+    right: max(0.8rem, env(safe-area-inset-right));
+    gap: 0.5rem;
+  }
+
+  .crystal-counter-pill {
+    font-size: 0.95rem;
+    gap: 0.25rem;
+  }
+
+  .crystal-icon {
+    font-size: 1rem;
+  }
+
+  .hud-timer-badge {
+    font-size: 0.9rem;
+  }
+
+  .btn-pause-tactile {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* 3. Controles Táteis Mobile */
+  .mobile-dpad-container {
+    display: block !important;
+    bottom: max(1.2rem, env(safe-area-inset-bottom)) !important;
+    left: max(1.2rem, env(safe-area-inset-left)) !important;
+    z-index: 50;
+    touch-action: none;
+  }
+
+  .dpad-outer-ring {
+    width: 110px;
+    height: 110px;
+  }
+
+  .dpad-center-knob {
+    width: 40px;
+    height: 40px;
+  }
+
+  .action-buttons-cluster {
+    display: flex !important;
+    bottom: max(1.2rem, env(safe-area-inset-bottom)) !important;
+    right: max(1.2rem, env(safe-area-inset-right)) !important;
+    gap: 0.75rem;
+    z-index: 50;
+    touch-action: none;
+  }
+
+  .btn-ability, .btn-backpack, .btn-run-mobile {
+    width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
+  }
+
+  .btn-sprint-primary {
+    width: 68px;
+    height: 68px;
+  }
+
+  .act-icon-large {
+    font-size: 1.9rem;
+  }
+
+  /* Oculta teclas de atalho de PC para visual mais limpo */
+  .act-key-tag,
+  .desktop-controls-hint-hud,
+  .desktop-controls-hint-menu {
+    display: none !important;
+  }
+
+  /* 4. Modais Adaptativos */
+  .modal-overlay {
+    padding: max(0.8rem, env(safe-area-inset-top)) max(0.8rem, env(safe-area-inset-right)) max(0.8rem, env(safe-area-inset-bottom)) max(0.8rem, env(safe-area-inset-left));
+  }
+
+  .modal-card {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    max-height: 90vh !important;
+    padding: 1.2rem 1.1rem !important;
+    gap: 0.9rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-header .title {
+    font-size: 1.3rem;
+  }
+
+  /* Mapa de 32 Fases */
+  .stages-map-card {
+    width: 96vw !important;
+    max-width: 96vw !important;
+    max-height: 94vh !important;
+    padding: 1rem 0.8rem !important;
+  }
+
+  .map-network-viewport {
+    min-height: 240px;
+    max-height: 48vh;
+    padding: 1rem 0.4rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tier-nodes-track {
+    gap: 0.65rem;
+  }
+
+  .stage-node-item {
+    width: 58px;
+    height: 58px;
+  }
+
+  .stage-diamond-core {
+    width: 42px;
+    height: 42px;
+  }
+
+  .stage-node-num {
+    font-size: 0.8rem;
+  }
+
+  .stage-badge-check {
+    width: 14px;
+    height: 14px;
+    font-size: 0.65rem;
+    top: -2px;
+    right: -2px;
+  }
+
+  .stage-passou-label {
+    font-size: 0.55rem;
+    bottom: -13px;
+  }
+
+  .stage-target-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: 0.8rem 1rem;
+  }
+
+  .stage-footer-actions {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .stage-footer-actions button {
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .btn-launch-stage {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  /* Loja de Armas */
+  .shop-modal-card {
+    padding: 1.2rem 1rem !important;
+  }
+
+  .shop-header-row {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .shop-balance-badge {
+    align-self: flex-start;
+    padding: 0.35rem 0.75rem;
+  }
+
+  .shop-items-grid {
+    grid-template-columns: 1fr;
+    max-height: 46vh;
+    gap: 0.75rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Conquistas e Customização */
+  .ach-item-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .modal-actions-row {
+    flex-direction: column;
+  }
+}
+
 
