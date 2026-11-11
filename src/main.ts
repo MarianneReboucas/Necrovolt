@@ -55,8 +55,11 @@ class Game {
     this.stageManager.setStage(savedStage);
     this.uiManager = new UIManager(this.progression);
 
-    // Carrega preferência de câmera salva (1ª ou 3ª Pessoa)
-    const savedCam = (localStorage.getItem('necrovolt_camera_mode') as 'first_person' | 'third_person' | null) || 'third_person';
+    // No celular, sempre força 3ª pessoa isométrica para visão panorâmica tática
+    const isMobile = isMobileDevice();
+    const savedCam = isMobile
+      ? 'third_person'
+      : ((localStorage.getItem('necrovolt_camera_mode') as 'first_person' | 'third_person' | null) || 'third_person');
     this.setCameraMode(savedCam);
 
     this.applyPlayerProgressionState();
@@ -357,7 +360,7 @@ class Game {
 
           if (aliveZombies.length > 0) {
             let closestZombie: any = null;
-            let minDistSq = 28 * 28; // Raio de alcance de mira assistida (28m)
+            let minDistSq = 34 * 34; // Raio de alcance de mira assistida (34m)
 
             for (let zIdx = 0; zIdx < aliveZombies.length; zIdx++) {
               const z = aliveZombies[zIdx];
@@ -368,15 +371,15 @@ class Game {
               }
             }
 
-            if (closestZombie && isShootingMobile) {
+            if (closestZombie && (isShootingMobile || this.inputManager.shouldShoot())) {
               // Ao disparar no celular, crava a mira diretamente no centro de massa do zumbi mais próximo
               aimTarget = new THREE.Vector3(
                 closestZombie.group.position.x,
                 0,
                 closestZombie.group.position.z
               );
-            } else if (closestZombie && minDistSq < 15 * 15) {
-              // Se um zumbi estiver perigosamente próximo (15m), vira o sobrevivente para a ameaça iminente
+            } else if (closestZombie && minDistSq < 18 * 18) {
+              // Se um zumbi estiver próximo (18m), vira o sobrevivente para a ameaça iminente
               aimTarget = new THREE.Vector3(
                 closestZombie.group.position.x,
                 0,

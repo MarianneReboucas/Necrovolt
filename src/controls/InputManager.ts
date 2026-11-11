@@ -187,6 +187,7 @@ export class InputManager {
       btnShoot.addEventListener('touchstart', startShoot, { passive: false });
       btnShoot.addEventListener('touchend', stopShoot);
       btnShoot.addEventListener('touchcancel', stopShoot);
+      btnShoot.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
       btnShoot.addEventListener('mousedown', startShoot);
       btnShoot.addEventListener('mouseup', stopShoot);
       btnShoot.addEventListener('mouseleave', stopShoot);

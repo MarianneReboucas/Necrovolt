@@ -2053,31 +2053,92 @@ html, body {
     height: 40px;
   }
 
-  .action-buttons-cluster {
-    display: flex !important;
-    bottom: max(1.2rem, env(safe-area-inset-bottom)) !important;
-    right: max(1.2rem, env(safe-area-inset-right)) !important;
-    gap: 0.75rem;
+  /* 3. Controles Táteis Mobile Ergonômicos (Layout em Arco/Cluster para o Polegar) */
+  .mobile-dpad-container {
+    display: block !important;
+    bottom: max(2rem, env(safe-area-inset-bottom)) !important;
+    left: max(2rem, env(safe-area-inset-left)) !important;
     z-index: 50;
     touch-action: none;
   }
 
-  .btn-ability, .btn-backpack, .btn-run-mobile {
-    width: 48px;
-    height: 48px;
-    font-size: 1.25rem;
+  .dpad-outer-ring {
+    width: 124px;
+    height: 124px;
   }
 
+  .dpad-center-knob {
+    width: 48px;
+    height: 48px;
+  }
+
+  .action-buttons-cluster {
+    display: block !important;
+    position: absolute !important;
+    bottom: max(1.8rem, env(safe-area-inset-bottom)) !important;
+    right: max(2.2rem, env(safe-area-inset-right)) !important;
+    width: 190px !important;
+    height: 190px !important;
+    z-index: 50;
+    touch-action: none;
+    pointer-events: auto;
+  }
+
+  /* Botão Principal de Disparo (Grande, 86px, centrado no alcance natural do polegar) */
   .btn-sprint-primary {
-    width: 68px;
-    height: 68px;
+    position: absolute !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    width: 86px !important;
+    height: 86px !important;
+    background: radial-gradient(circle, #0284c7 0%, #082f49 100%) !important;
+    border: 3px solid #38bdf8 !important;
+    box-shadow: 0 0 25px rgba(56, 189, 248, 0.6), 0 4px 15px rgba(0, 0, 0, 0.8) !important;
+    z-index: 20;
+  }
+
+  .btn-sprint-primary:active, .btn-sprint-primary.active {
+    transform: scale(0.92) !important;
+    background: radial-gradient(circle, #38bdf8 0%, #0369a1 100%) !important;
+    box-shadow: 0 0 35px rgba(56, 189, 248, 0.9) !important;
+  }
+
+  /* Botão de Correr (À esquerda do disparo) */
+  .btn-run-mobile {
+    position: absolute !important;
+    bottom: 8px !important;
+    right: 104px !important;
+    width: 54px !important;
+    height: 54px !important;
+    z-index: 10;
+  }
+
+  /* Botão de Recarregar (Logo acima do disparo) */
+  .btn-ability {
+    position: absolute !important;
+    bottom: 104px !important;
+    right: 8px !important;
+    width: 54px !important;
+    height: 54px !important;
+    z-index: 10;
+  }
+
+  /* Botão de Trocar Arma (Mochila - diagonal superior) */
+  .btn-backpack {
+    position: absolute !important;
+    bottom: 96px !important;
+    right: 96px !important;
+    width: 50px !important;
+    height: 50px !important;
+    z-index: 10;
   }
 
   .act-icon-large {
-    font-size: 1.9rem;
+    font-size: 2.3rem !important;
   }
 
-  /* Oculta teclas de atalho de PC para visual mais limpo */
+  /* Oculta botão de câmera e atalhos de PC no celular */
+  #btn-hud-camera,
   .act-key-tag,
   .desktop-controls-hint-hud,
   .desktop-controls-hint-menu {

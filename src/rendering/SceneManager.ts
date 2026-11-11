@@ -27,36 +27,38 @@ export class SceneManager {
     // Névoa atmosférica suave apenas na distância extrema (> 55 metros)
     this.scene.fog = new THREE.Fog(0x0a111a, 55, 130);
 
-    // Câmera isométrica em 3ª pessoa bem elevada e ampla (FOV 54)
+    const isMobile = isMobileDevice();
+
+    // Câmera isométrica em 3ª pessoa bem elevada e ampla (FOV 62 no celular para visão tática panorâmica)
     this.camera = new THREE.PerspectiveCamera(
-      54,
+      isMobile ? 62 : 54,
       window.innerWidth / window.innerHeight,
       0.1,
       250
     );
     this.camera.position.set(
       GAME_CONFIG.camera.offset.x,
-      GAME_CONFIG.camera.offset.y,
-      GAME_CONFIG.camera.offset.z
+      isMobile ? 26.0 : GAME_CONFIG.camera.offset.y,
+      isMobile ? 18.5 : GAME_CONFIG.camera.offset.z
     );
     this.camera.lookAt(0, GAME_CONFIG.camera.lookAtOffsetY, 0);
 
-    // Renderer com pós-processamento tonal cinematográfico e sombras realistas
+    // Renderer super leve em celulares: sem antialias pesado, precision mediump, 60 FPS garantidos
     this.renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: true,
+      antialias: !isMobile,
       powerPreference: 'high-performance',
+      precision: isMobile ? 'mediump' : 'highp',
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    const isMobile = isMobileDevice();
-    // Limita o DPI no mobile (1.5x) para reduzir fill-rate e consumo de bateria mantendo alta nitidez
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2.0));
+    // Em celular usa resolução nativa 1.0x para máxima fluidez sem aquecer o aparelho
+    this.renderer.setPixelRatio(isMobile ? 1.0 : Math.min(window.devicePixelRatio, 2.0));
     // Tonalidade cinematográfica e fidelidade de cor sRGB
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.25;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    // PARTE 2: Sombras suaves realistas (PCF Shadow Map)
-    this.renderer.shadowMap.enabled = true;
+    // Em celulares, DESLIGA mapa de sombras dinâmico para eliminar centenas de draw calls por frame
+    this.renderer.shadowMap.enabled = !isMobile;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     this.setupLighting();
@@ -70,7 +72,7 @@ export class SceneManager {
 
   private setupAtmosphericParticles(): void {
     const isMobile = isMobileDevice();
-    const count = isMobile ? 75 : 180;
+    const count = isMobile ? 35 : 180;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
@@ -94,26 +96,27 @@ export class SceneManager {
   }
 
   private setupLighting(): void {
+    const isMobile = isMobileDevice();
+
     // PARTE 1: Iluminação hemisférica para equilíbrio natural entre céu noturno e chão
-    const hemiLight = new THREE.HemisphereLight(0x7dd3fc, 0x0f172a, 0.85);
+    const hemiLight = new THREE.HemisphereLight(0x7dd3fc, 0x0f172a, isMobile ? 1.25 : 0.85);
     this.scene.add(hemiLight);
 
-    // Luz ambiente nítida
+    // Luz ambiente nítida (mais brilhante no celular para compensar ausência de sombras e manter excelente visibilidade)
     const ambientLight = new THREE.AmbientLight(
       GAME_CONFIG.lighting.ambientColor,
-      1.15
+      isMobile ? 1.55 : 1.15
     );
     this.scene.add(ambientLight);
 
-    // PARTE 2: Direcional da Lua com sombras suaves em alta definição (2048x2048)
+    // PARTE 2: Direcional da Lua (Sombras ativas apenas em PC para 60 FPS garantidos no celular)
     const moonLight = new THREE.DirectionalLight(
       GAME_CONFIG.lighting.directionalColor,
       1.65
     );
     moonLight.position.set(34, 52, 28);
-    moonLight.castShadow = true;
-    const isMobile = isMobileDevice();
-    const shadowRes = isMobile ? 1024 : 2048;
+    moonLight.castShadow = !isMobile;
+    const shadowRes = 2048;
     moonLight.shadow.mapSize.width = shadowRes;
     moonLight.shadow.mapSize.height = shadowRes;
     moonLight.shadow.camera.near = 0.5;
@@ -132,10 +135,12 @@ export class SceneManager {
     fillLight.position.set(-30, 32, -25);
     this.scene.add(fillLight);
 
-    // Ponto de luz da lanterna suave de rua (estilo o poste na foto)
-    const streetLamp = new THREE.PointLight(0xffedd5, 2.2, 16, 1.5);
-    streetLamp.position.set(-6, 4.5, -6);
-    this.scene.add(streetLamp);
+    // Ponto de luz do poste (Apenas no PC para não sobrecarregar shaders móveis)
+    if (!isMobile) {
+      const streetLamp = new THREE.PointLight(0xffedd5, 2.2, 16, 1.5);
+      streetLamp.position.set(-6, 4.5, -6);
+      this.scene.add(streetLamp);
+    }
 
     // Cristais de energia verde flutuantes (como na foto de referência)
     const crystalPositions = [
@@ -150,10 +155,13 @@ export class SceneManager {
     const crystalMat = new THREE.MeshBasicMaterial({ color: 0x4ade80 });
 
     crystalPositions.forEach((pos) => {
-      const pLight = new THREE.PointLight(0x22c55e, 2.8, 9, 1.8);
-      pLight.position.copy(pos);
-      this.scene.add(pLight);
-      this.toxicLights.push(pLight);
+      // No celular dispensa PointLights dinâmicas que recalculam cada pixel da tela
+      if (!isMobile) {
+        const pLight = new THREE.PointLight(0x22c55e, 2.8, 9, 1.8);
+        pLight.position.copy(pos);
+        this.scene.add(pLight);
+        this.toxicLights.push(pLight);
+      }
 
       const crystal = new THREE.Mesh(crystalGeo, crystalMat);
       crystal.position.copy(pos);
@@ -180,17 +188,21 @@ export class SceneManager {
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       const isMobile = isMobileDevice();
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2.0));
+      this.renderer.setPixelRatio(isMobile ? 1.0 : Math.min(window.devicePixelRatio, 2.0));
     });
   }
 
   public setCameraMode(mode: 'third_person' | 'first_person'): void {
+    if (isMobileDevice()) {
+      mode = 'third_person'; // No celular, força visão isométrica de sobrevivência tática
+    }
     this.cameraMode = mode;
     if (mode === 'first_person') {
       this.camera.fov = 72; // FOV amplo e imersivo de FPS
       this.camera.near = 0.05;
     } else {
-      this.camera.fov = 54; // Câmera tática 3ª pessoa
+      const isMobile = isMobileDevice();
+      this.camera.fov = isMobile ? 62 : 54; // Câmera tática 3ª pessoa
       this.camera.near = 0.1;
     }
     this.camera.updateProjectionMatrix();
