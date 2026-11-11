@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isMobileDevice } from './SceneManager';
 
 /**
  * SceneManager2D: Renderizador 2D Top-Down com Three.js OrthographicCamera.
@@ -39,7 +40,8 @@ export class SceneManager2D {
       powerPreference: 'high-performance',
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    const isMobile = isMobileDevice();
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.4 : 1.75));
 
     this.setupLighting();
     this.setupResizeListener();

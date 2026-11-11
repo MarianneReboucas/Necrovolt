@@ -28,6 +28,9 @@ html, body {
   background-color: var(--bg-dark);
   color: var(--text-main);
   font-family: var(--font-ui);
+  touch-action: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
 }
 
 #game-container {
@@ -35,6 +38,7 @@ html, body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  touch-action: none;
 }
 
 #bg-canvas {

@@ -1,6 +1,15 @@
 import * as THREE from 'three';
 import { GAME_CONFIG } from '../config';
 
+export const isMobileDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return (
+    /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent) ||
+    ('ontouchstart' in window && window.innerWidth <= 1024) ||
+    (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+  );
+};
+
 export class SceneManager {
   public scene: THREE.Scene;
   public camera: THREE.PerspectiveCamera;
@@ -39,7 +48,9 @@ export class SceneManager {
       powerPreference: 'high-performance',
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
+    const isMobile = isMobileDevice();
+    // Limita o DPI no mobile (1.5x) para reduzir fill-rate e consumo de bateria mantendo alta nitidez
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2.0));
     // Tonalidade cinematográfica e fidelidade de cor sRGB
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.25;
@@ -58,7 +69,8 @@ export class SceneManager {
   private particlePositions?: Float32Array;
 
   private setupAtmosphericParticles(): void {
-    const count = 180;
+    const isMobile = isMobileDevice();
+    const count = isMobile ? 75 : 180;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
@@ -100,8 +112,10 @@ export class SceneManager {
     );
     moonLight.position.set(34, 52, 28);
     moonLight.castShadow = true;
-    moonLight.shadow.mapSize.width = 2048;
-    moonLight.shadow.mapSize.height = 2048;
+    const isMobile = isMobileDevice();
+    const shadowRes = isMobile ? 1024 : 2048;
+    moonLight.shadow.mapSize.width = shadowRes;
+    moonLight.shadow.mapSize.height = shadowRes;
     moonLight.shadow.camera.near = 0.5;
     moonLight.shadow.camera.far = 150;
     const d = 58;
@@ -165,6 +179,8 @@ export class SceneManager {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+      const isMobile = isMobileDevice();
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2.0));
     });
   }
 
