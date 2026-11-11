@@ -1,6 +1,6 @@
 import type { GameState } from '../systems/StageManager';
 import { ProgressionSystem } from '../systems/ProgressionSystem';
-import { SpriteGenerator } from '../rendering/SpriteGenerator';
+import { CharacterPreviewScene } from '../rendering/CharacterPreviewScene';
 import { STAGES_CONFIG } from '../config';
 import {
   WEAPONS_CATALOG,
@@ -56,10 +56,9 @@ export class UIManager {
   private resultAchievementsBox: HTMLElement;
   private btnNextStage: HTMLButtonElement;
 
-  // Elementos do Modal de Personalização 2D
+  // Elementos do Modal de Personalização 3D
   private previewCanvas: HTMLCanvasElement;
-  private previewAnimFrameId: number | null = null;
-  private previewAnimTime: number = 0;
+  private characterPreviewScene: CharacterPreviewScene | null = null;
   private customSelectedName: HTMLElement;
   private customSelectedDesc: HTMLElement;
   private btnCustomAction: HTMLButtonElement;
@@ -266,9 +265,6 @@ export class UIManager {
         if (targetId) {
           const target = document.getElementById(targetId);
           if (target) {
-            if (targetId === 'custom-modal') {
-              this.stopCustomization2DPreview();
-            }
             this.closeModal(target);
           }
         }
@@ -446,75 +442,21 @@ export class UIManager {
     }
   }
 
-  // --- TELA DE PERSONALIZAÇÃO 2D ---
+  // --- TELA DE PERSONALIZAÇÃO 3D ---
   public openCustomizationModal(): void {
     this.selectedPreviewSkinId = this.progression.data.equippedSkin;
     this.openModal(this.customModal);
 
-    this.startCustomization2DPreview();
+    if (!this.characterPreviewScene && this.previewCanvas) {
+      this.characterPreviewScene = new CharacterPreviewScene(this.previewCanvas);
+    }
+    if (this.characterPreviewScene) {
+      this.characterPreviewScene.setSkin(this.selectedPreviewSkinId);
+      this.characterPreviewScene.start();
+    }
+
     this.renderCustomizationList();
     this.updateCustomizationDetails(this.selectedPreviewSkinId);
-  }
-
-  private startCustomization2DPreview(): void {
-    if (!this.previewCanvas) return;
-    this.stopCustomization2DPreview();
-
-    const ctx = this.previewCanvas.getContext('2d');
-    if (!ctx) return;
-
-    let lastTime = performance.now();
-
-    const renderLoop = (currentTime: number) => {
-      this.previewAnimFrameId = requestAnimationFrame(renderLoop);
-      const delta = (currentTime - lastTime) / 1000;
-      lastTime = currentTime;
-
-      // Animação suave de respiração / passos lentos (2D)
-      this.previewAnimTime += delta * 3;
-      const walkFrame = Math.sin(this.previewAnimTime) * 0.45;
-
-      const spriteCanvas = SpriteGenerator.createPlayerSprite(
-        this.selectedPreviewSkinId,
-        walkFrame,
-        false
-      );
-
-      ctx.clearRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
-
-      // Efeito de base de luz / pedestal suave sob o sobrevivente
-      const centerX = this.previewCanvas.width / 2;
-      const centerY = this.previewCanvas.height / 2 + 10;
-
-      const grad = ctx.createRadialGradient(centerX, centerY + 80, 10, centerX, centerY + 80, 85);
-      grad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
-      grad.addColorStop(0.6, 'rgba(34, 197, 94, 0.15)');
-      grad.addColorStop(1, 'rgba(15, 23, 42, 0)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.ellipse(centerX, centerY + 80, 85, 28, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Renderiza o sprite 2D centralizado e ampliado
-      const drawSize = 220;
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(
-        spriteCanvas,
-        centerX - drawSize / 2,
-        centerY - drawSize / 2,
-        drawSize,
-        drawSize
-      );
-    };
-
-    this.previewAnimFrameId = requestAnimationFrame(renderLoop);
-  }
-
-  private stopCustomization2DPreview(): void {
-    if (this.previewAnimFrameId !== null) {
-      cancelAnimationFrame(this.previewAnimFrameId);
-      this.previewAnimFrameId = null;
-    }
   }
 
   public renderCustomizationList(): void {
@@ -543,6 +485,9 @@ export class UIManager {
 
       item.addEventListener('click', () => {
         this.selectedPreviewSkinId = skin.id;
+        if (this.characterPreviewScene) {
+          this.characterPreviewScene.setSkin(skin.id);
+        }
         this.renderCustomizationList();
         this.updateCustomizationDetails(skin.id);
       });
@@ -929,6 +874,9 @@ export class UIManager {
   }
 
   public closeModal(modal: HTMLElement): void {
+    if (modal === this.customModal && this.characterPreviewScene) {
+      this.characterPreviewScene.stop();
+    }
     modal.classList.add('hidden');
   }
 

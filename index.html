@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-title" content="Necrovolt" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icon-192.svg" />
-    <title>NECROVOLT - Sobrevivência Pós-Apocalíptica 2D Top-Down</title>
+    <title>NECROVOLT - Sobrevivência Pós-Apocalíptica Tática 3D</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700;800;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -52,7 +52,7 @@
           </button>
           <button id="btn-custom" class="menu-btn">
             <span class="btn-icon">🧥</span>
-            <span class="btn-text">PERSONALIZAÇÃO 2D</span>
+            <span class="btn-text">PERSONALIZAÇÃO TÁTICA 3D</span>
           </button>
           <button id="btn-shop" class="menu-btn">
             <span class="btn-icon">📦</span>
@@ -195,7 +195,7 @@
         </div>
       </div>
 
-      <!-- MODAL: PERSONALIZAÇÃO 2D DO SOBREVIVENTE -->
+      <!-- MODAL: OFICINA DE PERSONALIZAÇÃO TÁTICA 3D -->
       <div id="custom-modal" class="modal-overlay hidden">
         <div class="modal-card custom-modal-card">
           <div class="modal-header">
@@ -209,10 +209,11 @@
           </div>
 
           <div class="custom-content-grid">
-            <!-- Coluna Esquerda: Vitrine 2D do Sobrevivente -->
+            <!-- Coluna Esquerda: Vitrine 3D do Sobrevivente -->
             <div class="preview-canvas-wrapper">
-              <div class="preview-badge-3d">SOBREVIVENTE • VISUAL EM 2D</div>
-              <canvas id="preview-2d-canvas" width="280" height="340"></canvas>
+              <div class="preview-badge-3d">SOBREVIVENTE • VISUAL 3D TÁTICO</div>
+              <canvas id="preview-2d-canvas" width="320" height="400"></canvas>
+              <div class="preview-drag-hint">🔄 Arraste para girar 360°</div>
             </div>
 
             <!-- Coluna Direita: Detalhes da Skin e Lista de Opções -->

@@ -413,6 +413,12 @@ export class Player {
     this.setSkin('skin_urban');
   }
 
+  public setHpBarVisible(visible: boolean): void {
+    if (this.hpBarGroup) {
+      this.hpBarGroup.visible = visible;
+    }
+  }
+
   // Alterna o modelo visual entre 1ª Pessoa (olhos do boneco) e 3ª Pessoa Isométrica
   public setFirstPersonMode(isFirstPerson: boolean): void {
     this.isFirstPerson = isFirstPerson;

@@ -972,11 +972,37 @@ html, body {
 }
 
 #preview-2d-canvas {
-  width: 220px;
-  height: 270px;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.7));
+  width: 100%;
+  height: 100%;
+  max-width: 320px;
+  max-height: 380px;
+  touch-action: none;
+  cursor: grab;
+  outline: none;
+  display: block;
+}
+
+#preview-2d-canvas:active {
+  cursor: grabbing;
+}
+
+.preview-drag-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  padding: 4px 12px;
+  border-radius: 999px;
+  pointer-events: none;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  z-index: 5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .custom-skins-selection {
@@ -1165,12 +1191,14 @@ html, body {
     gap: 1rem;
   }
   .preview-canvas-wrapper {
-    min-height: 220px;
-    height: 220px;
+    min-height: 240px;
+    height: 240px;
   }
   #preview-2d-canvas {
-    width: 170px;
-    height: 210px;
+    width: 100%;
+    height: 100%;
+    max-width: 260px;
+    max-height: 230px;
   }
   .skins-list-container {
     max-height: 180px;

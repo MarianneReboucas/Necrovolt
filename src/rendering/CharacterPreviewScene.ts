@@ -11,48 +11,57 @@ export class CharacterPreviewScene {
   private isDragging: boolean = false;
   private previousMouseX: number = 0;
   private animFrameId: number | null = null;
-  private autoRotateSpeed: number = 0.005;
+  private autoRotateSpeed: number = 0.006;
+  private idleTime: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.scene = new THREE.Scene();
 
-    this.camera = new THREE.PerspectiveCamera(40, canvas.clientWidth / canvas.clientHeight, 0.1, 50);
-    this.camera.position.set(0, 1.4, 3.8);
-    this.camera.lookAt(0, 1.05, 0);
+    const width = canvas.clientWidth || 300;
+    const height = canvas.clientHeight || 360;
+
+    this.camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 50);
+    this.camera.position.set(0, 1.35, 3.8);
+    this.camera.lookAt(0, 1.0, 0);
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
       alpha: true,
+      powerPreference: 'high-performance',
     });
-    this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    this.renderer.setSize(width, height, false);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-    // Iluminação do estúdio de inspeção
-    const amb = new THREE.AmbientLight(0xffffff, 1.2);
+    // Iluminação cinematográfica do estúdio de inspeção tática
+    const amb = new THREE.AmbientLight(0xffffff, 1.5);
     this.scene.add(amb);
 
-    const keyLight = new THREE.DirectionalLight(0x38bdf8, 2.2);
-    keyLight.position.set(4, 5, 4);
+    const keyLight = new THREE.DirectionalLight(0x38bdf8, 2.4);
+    keyLight.position.set(3.5, 4.5, 4);
     this.scene.add(keyLight);
 
     const rimLight = new THREE.DirectionalLight(0x39ff14, 2.0);
-    rimLight.position.set(-4, 3, -3);
+    rimLight.position.set(-3.5, 3.5, -3);
     this.scene.add(rimLight);
 
-    // Plataforma circular de inspeção sob os pés
+    const fillLight = new THREE.DirectionalLight(0xffffff, 1.1);
+    fillLight.position.set(-2, 3, 3);
+    this.scene.add(fillLight);
+
+    // Plataforma circular de inspeção militar sob os pés
     const standGeo = new THREE.CylinderGeometry(1.2, 1.3, 0.12, 32);
     const standMat = new THREE.MeshStandardMaterial({
       color: 0x111827,
-      roughness: 0.4,
+      roughness: 0.35,
       metalness: 0.8,
     });
     const stand = new THREE.Mesh(standGeo, standMat);
     stand.position.y = -0.06;
     this.scene.add(stand);
 
-    // Anel luminoso na base do stand
+    // Anel luminoso neon verde na base do pedestal
     const ringGeo = new THREE.RingGeometry(1.15, 1.25, 32);
     const ringMat = new THREE.MeshBasicMaterial({ color: 0x39ff14, side: THREE.DoubleSide });
     const ring = new THREE.Mesh(ringGeo, ringMat);
@@ -60,8 +69,9 @@ export class CharacterPreviewScene {
     ring.position.y = 0.01;
     this.scene.add(ring);
 
-    // Cria o personagem preview reutilizando o mesmo modelo Player
+    // Modelo 3D autêntico do Sobrevivente
     this.player = new Player(this.scene);
+    this.player.setHpBarVisible(false);
 
     this.setupInteractions();
   }
@@ -83,13 +93,13 @@ export class CharacterPreviewScene {
       this.previousMouseX = e.clientX;
     });
 
-    // Touch para celular / tablets
+    // Rotação touch suave para celular e tablets
     this.canvas.addEventListener('touchstart', (e) => {
       if (e.touches.length > 0) {
         this.isDragging = true;
         this.previousMouseX = e.touches[0].clientX;
       }
-    });
+    }, { passive: true });
 
     window.addEventListener('touchend', () => {
       this.isDragging = false;
@@ -97,31 +107,52 @@ export class CharacterPreviewScene {
 
     window.addEventListener('touchmove', (e) => {
       if (!this.isDragging || e.touches.length === 0) return;
+      if (e.cancelable) {
+        e.preventDefault();
+      }
       const deltaX = e.touches[0].clientX - this.previousMouseX;
       this.player.group.rotation.y += deltaX * 0.012;
       this.previousMouseX = e.touches[0].clientX;
-    });
+    }, { passive: false });
   }
 
   public setSkin(skinId: SkinId): void {
     this.player.setSkin(skinId);
   }
 
+  public resize(): void {
+    const width = this.canvas.clientWidth || 300;
+    const height = this.canvas.clientHeight || 360;
+    if (width > 0 && height > 0) {
+      this.camera.aspect = width / height;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(width, height, false);
+    }
+  }
+
   public start(): void {
+    this.resize();
     if (this.animFrameId !== null) return;
 
-    // Redimensionamento responsivo do canvas interno
-    const width = this.canvas.clientWidth || 380;
-    const height = this.canvas.clientHeight || 460;
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height);
+    let frameCount = 0;
 
     const render = () => {
       this.animFrameId = requestAnimationFrame(render);
+
+      // Reajusta dimensões nos primeiros frames ao abrir o modal
+      if (frameCount < 5) {
+        frameCount++;
+        this.resize();
+      }
+
       if (!this.isDragging) {
         this.player.group.rotation.y += this.autoRotateSpeed;
       }
+
+      // Sutil respiração idle para dar vida ao personagem
+      this.idleTime += 0.03;
+      this.player.group.position.y = Math.sin(this.idleTime) * 0.018;
+
       this.renderer.render(this.scene, this.camera);
     };
 
