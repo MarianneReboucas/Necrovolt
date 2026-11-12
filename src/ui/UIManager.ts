@@ -707,13 +707,28 @@ export class UIManager {
               !levelMet
                 ? `<span class="lock-req">🔒 Nível ${w.reqLevel} • ${w.price.toLocaleString('pt-BR')} ${GOLD_COIN_SVG}</span>`
                 : isUnlocked
-                ? `<button class="btn-shop-action btn-equip ${isEquipped ? 'btn-active-equipped' : ''}" data-weapon="${w.id}" ${isEquipped ? 'disabled' : ''}>${isEquipped ? '✓ EM USO' : 'EQUIPAR ARMA'}</button>`
+                ? `<button class="btn-shop-action btn-equip ${isEquipped ? 'btn-active-equipped' : ''}" data-weapon="${w.id}" ${isEquipped ? 'disabled' : ''}>${isEquipped ? '✓ EM USO' : 'EQUIPAR'}</button>`
                 : `<button class="btn-shop-action btn-buy" data-weapon="${w.id}" ${canAfford ? '' : 'disabled'}>ADQUIRIR • ${w.price.toLocaleString('pt-BR')} ${GOLD_COIN_SVG}</button>`
             }
           </div>
         `;
 
-        card.querySelector('.btn-buy')?.addEventListener('click', () => {
+        if (isUnlocked && !isEquipped) {
+          card.style.cursor = 'pointer';
+          card.setAttribute('title', `Clique para equipar ${w.name}`);
+          card.addEventListener('click', (e) => {
+            if ((e.target as HTMLElement).closest('.btn-shop-action')) return;
+            if (this.progression.equipWeapon(w.id)) {
+              this.showFeedback(`${w.name} equipada com sucesso!`, true);
+              if (this.onWeaponChangedCallback) {
+                this.onWeaponChangedCallback(w.id);
+              }
+            }
+          });
+        }
+
+        card.querySelector('.btn-buy')?.addEventListener('click', (e) => {
+          e.stopPropagation();
           const res = this.progression.buyWeapon(w.id);
           this.showFeedback(res.message, res.success);
           if (res.success && this.onWeaponChangedCallback) {
@@ -721,7 +736,8 @@ export class UIManager {
           }
         });
 
-        card.querySelector('.btn-equip')?.addEventListener('click', () => {
+        card.querySelector('.btn-equip')?.addEventListener('click', (e) => {
+          e.stopPropagation();
           if (this.progression.equipWeapon(w.id)) {
             this.showFeedback(`${w.name} equipada com sucesso!`, true);
             if (this.onWeaponChangedCallback) {
