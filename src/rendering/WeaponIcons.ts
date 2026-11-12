@@ -1,5 +1,17 @@
 import type { WeaponId } from '../systems/EconomyCatalog';
 
+/**
+ * Ícone vetorial SVG de moeda dourada (garante renderização nítida sem falha de emoji '▯' em qualquer Windows/Android/iOS)
+ */
+export const GOLD_COIN_SVG = `
+  <svg class="gold-coin-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: -0.2em; display: inline-block;">
+    <circle cx="12" cy="12" r="10" fill="#f59e0b" stroke="#d97706" stroke-width="1.5"/>
+    <circle cx="12" cy="12" r="7.5" fill="#fbbf24" stroke="#fef08a" stroke-width="1"/>
+    <circle cx="12" cy="12" r="5" stroke="#d97706" stroke-width="0.8" stroke-dasharray="1.5 1"/>
+    <text x="12" y="15.5" font-size="10" font-weight="900" text-anchor="middle" fill="#78350f" font-family="sans-serif">¢</text>
+  </svg>
+`;
+
 export interface WeaponBadgeInfo {
   label: string;
   color: string;
@@ -213,3 +225,4 @@ export function getWeaponIconSvg(id: WeaponId): string {
       `;
   }
 }
+

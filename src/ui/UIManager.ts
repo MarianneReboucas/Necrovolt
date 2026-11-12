@@ -1,7 +1,7 @@
 import type { GameState } from '../systems/StageManager';
 import { ProgressionSystem } from '../systems/ProgressionSystem';
 import { CharacterPreviewScene } from '../rendering/CharacterPreviewScene';
-import { getWeaponIconSvg, getWeaponBadgeInfo } from '../rendering/WeaponIcons';
+import { getWeaponIconSvg, getWeaponBadgeInfo, GOLD_COIN_SVG } from '../rendering/WeaponIcons';
 import { STAGES_CONFIG } from '../config';
 import {
   WEAPONS_CATALOG,
@@ -600,10 +600,10 @@ export class UIManager {
     if (this.menuPlayerLevel) this.menuPlayerLevel.textContent = `NVL ${d.level}`;
     if (this.menuPlayerXp) this.menuPlayerXp.textContent = `${d.xp.toLocaleString('pt-BR')} / ${neededXp.toLocaleString('pt-BR')} XP`;
     if (this.menuPlayerCoins) {
-      this.menuPlayerCoins.innerHTML = `${d.coins.toLocaleString('pt-BR')} <span class="coin-symbol">🪙</span>`;
+      this.menuPlayerCoins.innerHTML = `${d.coins.toLocaleString('pt-BR')} ${GOLD_COIN_SVG}`;
     }
     if (this.shopCoinsDisplay) {
-      this.shopCoinsDisplay.innerHTML = `${d.coins.toLocaleString('pt-BR')} <span class="coin-symbol">🪙</span>`;
+      this.shopCoinsDisplay.innerHTML = `${d.coins.toLocaleString('pt-BR')} ${GOLD_COIN_SVG}`;
     }
 
     const btnPlayText = document.getElementById('btn-play-text');
@@ -645,22 +645,22 @@ export class UIManager {
           <div class="card-header">
             <div class="card-weapon-icon-box" style="--badge-color: ${badgeInfo.color}; --badge-bg: ${badgeInfo.accentBg};">
               ${iconSvg}
-              <span class="weapon-category-tag" style="color: ${badgeInfo.color}; border-color: ${badgeInfo.color}; background: ${badgeInfo.accentBg};">${badgeInfo.label}</span>
             </div>
             <div class="card-title-group">
-              <div class="card-title-row">
-                <h3>${w.name}</h3>
+              <div class="card-badge-row">
+                <span class="weapon-category-tag" style="color: ${badgeInfo.color}; border-color: ${badgeInfo.color}; background: ${badgeInfo.accentBg};">${badgeInfo.label}</span>
                 ${isEquipped ? '<span class="badge-equipped">✓ EQUIPADA</span>' : isUnlocked ? '<span class="badge-unlocked">ADQUIRIDA</span>' : ''}
               </div>
-              <span class="card-sub">${w.desc}</span>
+              <h3 class="weapon-name-title">${w.name}</h3>
+              <p class="card-sub">${w.desc}</p>
             </div>
           </div>
 
           <div class="card-stats-visual-grid">
             <div class="stat-gauge-item">
               <div class="stat-gauge-header">
-                <span class="stat-gauge-label">💥 DANO IMPACTO</span>
-                <strong class="stat-gauge-val" style="color: #f87171;">${w.damage}${w.pellets > 1 ? ` x${w.pellets} (${totalDmg})` : ''}</strong>
+                <span class="stat-gauge-label">💥 DANO</span>
+                <strong class="stat-gauge-val" style="color: #f87171;">${w.damage}${w.pellets > 1 ? ` x${w.pellets}` : ''}</strong>
               </div>
               <div class="stat-gauge-track">
                 <div class="stat-gauge-fill stat-fill-damage" style="width: ${dmgPct}%;"></div>
@@ -679,7 +679,7 @@ export class UIManager {
 
             <div class="stat-gauge-item">
               <div class="stat-gauge-header">
-                <span class="stat-gauge-label">🎒 CARREGADOR</span>
+                <span class="stat-gauge-label">🎒 PENTE</span>
                 <strong class="stat-gauge-val" style="color: #4ade80;">${w.magSize} tiros</strong>
               </div>
               <div class="stat-gauge-track">
@@ -700,15 +700,15 @@ export class UIManager {
 
           <div class="card-footer">
             <div class="card-footer-tags">
-              <span class="weapon-meta-tag">⏱️ Recarga: ${w.reloadTime.toFixed(1)}s</span>
-              <span class="weapon-meta-tag">🚀 Projétil: ${w.bulletSpeed}m/s</span>
+              <span class="weapon-meta-tag">⏱️ ${w.reloadTime.toFixed(1)}s</span>
+              <span class="weapon-meta-tag">🚀 ${w.bulletSpeed}m/s</span>
             </div>
             ${
               !levelMet
-                ? `<span class="lock-req">🔒 Requer Nível ${w.reqLevel} • ${w.price.toLocaleString('pt-BR')} 🪙</span>`
+                ? `<span class="lock-req">🔒 Nível ${w.reqLevel} • ${w.price.toLocaleString('pt-BR')} ${GOLD_COIN_SVG}</span>`
                 : isUnlocked
                 ? `<button class="btn-shop-action btn-equip ${isEquipped ? 'btn-active-equipped' : ''}" data-weapon="${w.id}" ${isEquipped ? 'disabled' : ''}>${isEquipped ? '✓ EM USO' : 'EQUIPAR ARMA'}</button>`
-                : `<button class="btn-shop-action btn-buy" data-weapon="${w.id}" ${canAfford ? '' : 'disabled'}>ADQUIRIR • ${w.price.toLocaleString('pt-BR')} 🪙</button>`
+                : `<button class="btn-shop-action btn-buy" data-weapon="${w.id}" ${canAfford ? '' : 'disabled'}>ADQUIRIR • ${w.price.toLocaleString('pt-BR')} ${GOLD_COIN_SVG}</button>`
             }
           </div>
         `;
@@ -746,14 +746,14 @@ export class UIManager {
           <div class="card-header">
             <div class="card-weapon-icon-box" style="--badge-color: #facc15; --badge-bg: rgba(250, 204, 21, 0.15);">
               <span class="card-icon" style="font-size: 2.2rem;">${u.icon}</span>
-              <span class="weapon-category-tag" style="color: #facc15; border-color: #facc15; background: rgba(250, 204, 21, 0.18);">UPGRADE</span>
             </div>
             <div class="card-title-group">
-              <div class="card-title-row">
-                <h3>${u.name}</h3>
+              <div class="card-badge-row">
+                <span class="weapon-category-tag" style="color: #facc15; border-color: #facc15; background: rgba(250, 204, 21, 0.18);">UPGRADE PERMANENTE</span>
                 <span class="badge-level">NÍVEL ${currentLvl} / ${u.maxLevel}</span>
               </div>
-              <span class="card-sub">${u.desc}</span>
+              <h3 class="weapon-name-title">${u.name}</h3>
+              <p class="card-sub">${u.desc}</p>
             </div>
           </div>
 
@@ -781,14 +781,14 @@ export class UIManager {
 
           <div class="card-footer">
             <div class="card-footer-tags">
-              <span class="weapon-meta-tag">⚡ Aplica-se a Todas as Armas</span>
+              <span class="weapon-meta-tag">⚡ Todas as Armas</span>
             </div>
             ${
               isMax
-                ? `<span class="badge-maxed">✓ Aprimoramento Máximo Atingido</span>`
+                ? `<span class="badge-maxed">✓ Nível Máximo</span>`
                 : !levelMet
                 ? `<span class="lock-req">🔒 Requer Nível ${u.reqLevel}</span>`
-                : `<button class="btn-shop-action btn-buy" data-upgrade="${u.id}" ${canAfford ? '' : 'disabled'}>UPGRADE • ${cost.toLocaleString('pt-BR')} 🪙</button>`
+                : `<button class="btn-shop-action btn-buy" data-upgrade="${u.id}" ${canAfford ? '' : 'disabled'}>APRIMORAR • ${cost.toLocaleString('pt-BR')} ${GOLD_COIN_SVG}</button>`
             }
           </div>
         `;
