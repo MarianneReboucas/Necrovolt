@@ -1,6 +1,7 @@
 import type { GameState } from '../systems/StageManager';
 import { ProgressionSystem } from '../systems/ProgressionSystem';
 import { CharacterPreviewScene } from '../rendering/CharacterPreviewScene';
+import { getWeaponIconSvg, getWeaponBadgeInfo } from '../rendering/WeaponIcons';
 import { STAGES_CONFIG } from '../config';
 import {
   WEAPONS_CATALOG,
@@ -597,9 +598,13 @@ export class UIManager {
     const neededXp = this.progression.getXpForNextLevel();
 
     if (this.menuPlayerLevel) this.menuPlayerLevel.textContent = `NVL ${d.level}`;
-    if (this.menuPlayerXp) this.menuPlayerXp.textContent = `${d.xp} / ${neededXp} XP`;
-    if (this.menuPlayerCoins) this.menuPlayerCoins.textContent = `${d.coins} 🪙`;
-    if (this.shopCoinsDisplay) this.shopCoinsDisplay.textContent = `${d.coins} 🪙`;
+    if (this.menuPlayerXp) this.menuPlayerXp.textContent = `${d.xp.toLocaleString('pt-BR')} / ${neededXp.toLocaleString('pt-BR')} XP`;
+    if (this.menuPlayerCoins) {
+      this.menuPlayerCoins.innerHTML = `${d.coins.toLocaleString('pt-BR')} <span class="coin-symbol">🪙</span>`;
+    }
+    if (this.shopCoinsDisplay) {
+      this.shopCoinsDisplay.innerHTML = `${d.coins.toLocaleString('pt-BR')} <span class="coin-symbol">🪙</span>`;
+    }
 
     const btnPlayText = document.getElementById('btn-play-text');
     if (btnPlayText) {
@@ -610,7 +615,7 @@ export class UIManager {
     }
   }
 
-  // Renderiza a Loja
+  // Renderiza a Loja Ampla e Harmônica
   public renderShopContent(): void {
     const container = document.getElementById('shop-items-container');
     if (!container) return;
@@ -624,31 +629,86 @@ export class UIManager {
         const isEquipped = d.equippedWeapon === w.id;
         const canAfford = d.coins >= w.price;
         const levelMet = d.level >= w.reqLevel;
+        const badgeInfo = getWeaponBadgeInfo(w.id);
+        const iconSvg = getWeaponIconSvg(w.id);
+
+        const totalDmg = w.damage * w.pellets;
+        const dmgPct = Math.min(100, Math.round((totalDmg / 450) * 100));
+        const fireRateVal = 1 / w.fireRate;
+        const fireRatePct = Math.min(100, Math.round((fireRateVal / 16) * 100));
+        const magPct = Math.min(100, Math.round((w.magSize / 45) * 100));
+        const rangePct = Math.min(100, Math.round((w.range / 90) * 100));
 
         const card = document.createElement('div');
         card.className = `shop-card ${isEquipped ? 'card-equipped' : ''}`;
         card.innerHTML = `
           <div class="card-header">
-            <span class="card-icon">${w.icon}</span>
+            <div class="card-weapon-icon-box" style="--badge-color: ${badgeInfo.color}; --badge-bg: ${badgeInfo.accentBg};">
+              ${iconSvg}
+              <span class="weapon-category-tag" style="color: ${badgeInfo.color}; border-color: ${badgeInfo.color}; background: ${badgeInfo.accentBg};">${badgeInfo.label}</span>
+            </div>
             <div class="card-title-group">
-              <h3>${w.name}</h3>
+              <div class="card-title-row">
+                <h3>${w.name}</h3>
+                ${isEquipped ? '<span class="badge-equipped">✓ EQUIPADA</span>' : isUnlocked ? '<span class="badge-unlocked">ADQUIRIDA</span>' : ''}
+              </div>
               <span class="card-sub">${w.desc}</span>
             </div>
-            ${isEquipped ? '<span class="badge-equipped">EQUIPADA</span>' : ''}
           </div>
-          <div class="card-stats">
-            <div>Dano: <strong>${w.damage}</strong> ${w.pellets > 1 ? `x${w.pellets}` : ''}</div>
-            <div>Cadência: <strong>${(1 / w.fireRate).toFixed(1)} t/s</strong></div>
-            <div>Carregador: <strong>${w.magSize} munições</strong></div>
-            <div>Alcance: <strong>${w.range}m</strong></div>
+
+          <div class="card-stats-visual-grid">
+            <div class="stat-gauge-item">
+              <div class="stat-gauge-header">
+                <span class="stat-gauge-label">💥 DANO IMPACTO</span>
+                <strong class="stat-gauge-val" style="color: #f87171;">${w.damage}${w.pellets > 1 ? ` x${w.pellets} (${totalDmg})` : ''}</strong>
+              </div>
+              <div class="stat-gauge-track">
+                <div class="stat-gauge-fill stat-fill-damage" style="width: ${dmgPct}%;"></div>
+              </div>
+            </div>
+
+            <div class="stat-gauge-item">
+              <div class="stat-gauge-header">
+                <span class="stat-gauge-label">⚡ CADÊNCIA</span>
+                <strong class="stat-gauge-val" style="color: #38bdf8;">${fireRateVal.toFixed(1)} t/s</strong>
+              </div>
+              <div class="stat-gauge-track">
+                <div class="stat-gauge-fill stat-fill-firerate" style="width: ${fireRatePct}%;"></div>
+              </div>
+            </div>
+
+            <div class="stat-gauge-item">
+              <div class="stat-gauge-header">
+                <span class="stat-gauge-label">🎒 CARREGADOR</span>
+                <strong class="stat-gauge-val" style="color: #4ade80;">${w.magSize} tiros</strong>
+              </div>
+              <div class="stat-gauge-track">
+                <div class="stat-gauge-fill stat-fill-mag" style="width: ${magPct}%;"></div>
+              </div>
+            </div>
+
+            <div class="stat-gauge-item">
+              <div class="stat-gauge-header">
+                <span class="stat-gauge-label">🎯 ALCANCE</span>
+                <strong class="stat-gauge-val" style="color: #facc15;">${w.range}m</strong>
+              </div>
+              <div class="stat-gauge-track">
+                <div class="stat-gauge-fill stat-fill-range" style="width: ${rangePct}%;"></div>
+              </div>
+            </div>
           </div>
+
           <div class="card-footer">
+            <div class="card-footer-tags">
+              <span class="weapon-meta-tag">⏱️ Recarga: ${w.reloadTime.toFixed(1)}s</span>
+              <span class="weapon-meta-tag">🚀 Projétil: ${w.bulletSpeed}m/s</span>
+            </div>
             ${
               !levelMet
-                ? `<span class="lock-req">🔒 Requer Nível ${w.reqLevel} • ${w.price} 🪙</span>`
+                ? `<span class="lock-req">🔒 Requer Nível ${w.reqLevel} • ${w.price.toLocaleString('pt-BR')} 🪙</span>`
                 : isUnlocked
-                ? `<button class="btn-shop-action btn-equip" data-weapon="${w.id}" ${isEquipped ? 'disabled' : ''}>${isEquipped ? 'EM USO' : 'EQUIPAR'}</button>`
-                : `<button class="btn-shop-action btn-buy" data-weapon="${w.id}" ${canAfford ? '' : 'disabled'}>COMPRAR • ${w.price} 🪙</button>`
+                ? `<button class="btn-shop-action btn-equip ${isEquipped ? 'btn-active-equipped' : ''}" data-weapon="${w.id}" ${isEquipped ? 'disabled' : ''}>${isEquipped ? '✓ EM USO' : 'EQUIPAR ARMA'}</button>`
+                : `<button class="btn-shop-action btn-buy" data-weapon="${w.id}" ${canAfford ? '' : 'disabled'}>ADQUIRIR • ${w.price.toLocaleString('pt-BR')} 🪙</button>`
             }
           </div>
         `;
@@ -663,7 +723,7 @@ export class UIManager {
 
         card.querySelector('.btn-equip')?.addEventListener('click', () => {
           if (this.progression.equipWeapon(w.id)) {
-            this.showFeedback(`${w.name} equipada!`, true);
+            this.showFeedback(`${w.name} equipada com sucesso!`, true);
             if (this.onWeaponChangedCallback) {
               this.onWeaponChangedCallback(w.id);
             }
@@ -684,24 +744,51 @@ export class UIManager {
         card.className = `shop-card ${isMax ? 'card-max' : ''}`;
         card.innerHTML = `
           <div class="card-header">
-            <span class="card-icon">${u.icon}</span>
+            <div class="card-weapon-icon-box" style="--badge-color: #facc15; --badge-bg: rgba(250, 204, 21, 0.15);">
+              <span class="card-icon" style="font-size: 2.2rem;">${u.icon}</span>
+              <span class="weapon-category-tag" style="color: #facc15; border-color: #facc15; background: rgba(250, 204, 21, 0.18);">UPGRADE</span>
+            </div>
             <div class="card-title-group">
-              <h3>${u.name}</h3>
+              <div class="card-title-row">
+                <h3>${u.name}</h3>
+                <span class="badge-level">NÍVEL ${currentLvl} / ${u.maxLevel}</span>
+              </div>
               <span class="card-sub">${u.desc}</span>
             </div>
-            <span class="badge-level">NÍVEL ${currentLvl} / ${u.maxLevel}</span>
           </div>
-          <div class="card-stats">
-            <div>Bônus Atual: <strong>+${(currentLvl * u.bonusPerLevel * 100).toFixed(0)}${u.unit}</strong></div>
-            <div>Próximo Nível: <strong>+${((currentLvl + 1) * u.bonusPerLevel * 100).toFixed(0)}${u.unit}</strong></div>
+
+          <div class="card-stats-visual-grid">
+            <div class="stat-gauge-item">
+              <div class="stat-gauge-header">
+                <span class="stat-gauge-label">BÔNUS ATUAL</span>
+                <strong class="stat-gauge-val" style="color: #4ade80;">+${(currentLvl * u.bonusPerLevel * 100).toFixed(0)}${u.unit}</strong>
+              </div>
+              <div class="stat-gauge-track">
+                <div class="stat-gauge-fill stat-fill-mag" style="width: ${(currentLvl / u.maxLevel) * 100}%;"></div>
+              </div>
+            </div>
+
+            <div class="stat-gauge-item">
+              <div class="stat-gauge-header">
+                <span class="stat-gauge-label">PRÓXIMO NÍVEL</span>
+                <strong class="stat-gauge-val" style="color: #38bdf8;">${isMax ? 'MÁXIMO' : `+${((currentLvl + 1) * u.bonusPerLevel * 100).toFixed(0)}${u.unit}`}</strong>
+              </div>
+              <div class="stat-gauge-track">
+                <div class="stat-gauge-fill stat-fill-firerate" style="width: ${Math.min(100, ((currentLvl + 1) / u.maxLevel) * 100)}%;"></div>
+              </div>
+            </div>
           </div>
+
           <div class="card-footer">
+            <div class="card-footer-tags">
+              <span class="weapon-meta-tag">⚡ Aplica-se a Todas as Armas</span>
+            </div>
             ${
               isMax
-                ? `<span class="badge-maxed">Aprimoramento Máximo</span>`
+                ? `<span class="badge-maxed">✓ Aprimoramento Máximo Atingido</span>`
                 : !levelMet
                 ? `<span class="lock-req">🔒 Requer Nível ${u.reqLevel}</span>`
-                : `<button class="btn-shop-action btn-buy" data-upgrade="${u.id}" ${canAfford ? '' : 'disabled'}>UPGRADE • ${cost} 🪙</button>`
+                : `<button class="btn-shop-action btn-buy" data-upgrade="${u.id}" ${canAfford ? '' : 'disabled'}>UPGRADE • ${cost.toLocaleString('pt-BR')} 🪙</button>`
             }
           </div>
         `;
