@@ -1,5 +1,57 @@
 import * as THREE from 'three';
 import { GAME_CONFIG } from '../config';
+import type { ZombieInstance } from '../entities/ZombieManager';
+
+export type HazardType = 'mine' | 'electric' | 'toxic';
+
+export interface TrapLandmine {
+  group: THREE.Group;
+  pos: THREE.Vector3;
+  radius: number;
+  blastRadius: number;
+  damage: number;
+  isArmed: boolean;
+  isTriggered: boolean;
+  fuseTimer: number;
+  isExploded: boolean;
+  ledMesh: THREE.Mesh;
+  ledLight: THREE.PointLight;
+  pulsePhase: number;
+}
+
+export interface TrapElectricArc {
+  group: THREE.Group;
+  posA: THREE.Vector3;
+  posB: THREE.Vector3;
+  meshArc: THREE.Mesh;
+  light: THREE.PointLight;
+  cycleTimer: number;
+  activeDuration: number;
+  inactiveDuration: number;
+  isActive: boolean;
+  damage: number;
+  hitCooldown: number;
+}
+
+export interface TrapToxicZone {
+  mesh: THREE.Mesh;
+  pos: THREE.Vector3;
+  radius: number;
+  damagePerSec: number;
+  slowMult: number;
+  light: THREE.PointLight;
+  bubbles: THREE.Mesh[];
+  tickTimer: number;
+}
+
+export interface ExplosionVisual {
+  group: THREE.Group;
+  fireball: THREE.Mesh;
+  shockwave: THREE.Mesh;
+  light: THREE.PointLight;
+  timer: number;
+  duration: number;
+}
 
 export type VehicleType =
   | 'police'
@@ -31,6 +83,12 @@ export class Environment {
   public group: THREE.Group;
   public floorLights: THREE.PointLight[] = [];
 
+  // Armadilhas e Perigos Ambientais Ativos
+  public landmines: TrapLandmine[] = [];
+  public electricArcs: TrapElectricArc[] = [];
+  public toxicZones: TrapToxicZone[] = [];
+  public explosions: ExplosionVisual[] = [];
+
   // Luzes dinâmicas com animação (chamas, sirenes)
   private animatedFires: { light: THREE.PointLight; baseIntensity: number; phase: number }[] = [];
   private animatedSirens: { light: THREE.PointLight; colA: number; colB: number; timer: number }[] = [];
@@ -60,12 +118,24 @@ export class Environment {
     this.floorLights = [];
     this.animatedFires = [];
     this.animatedSirens = [];
+    this.landmines = [];
+    this.electricArcs = [];
+    this.toxicZones = [];
+    this.explosions = [];
 
     this.buildMapForStage(stageNumber);
   }
 
-  // Atualização de iluminação ambiental viva (chamas crepitantes e sirenes de emergência)
-  public update(delta: number): void {
+  // Atualização de iluminação ambiental viva, armadilhas, poças de ácido, choques e minas
+  public update(
+    delta: number,
+    playerPos?: THREE.Vector3,
+    onPlayerHazardDamage?: (dmg: number, type: HazardType) => void,
+    onPlayerSlow?: (slowMult: number) => void,
+    zombies?: ZombieInstance[],
+    onZombieDamageFromMine?: (z: ZombieInstance, dmg: number) => void,
+    onMineArmed?: () => void
+  ): void {
     // 1. Chamas de barris crepitantes
     for (let i = 0; i < this.animatedFires.length; i++) {
       const f = this.animatedFires[i];
@@ -80,6 +150,155 @@ export class Environment {
       s.timer += delta * 4;
       const isRed = Math.floor(s.timer) % 2 === 0;
       s.light.color.setHex(isRed ? s.colA : s.colB);
+    }
+
+    // 3. Efeitos visuais de explosão
+    for (let i = this.explosions.length - 1; i >= 0; i--) {
+      const exp = this.explosions[i];
+      exp.timer += delta;
+      const progress = exp.timer / exp.duration;
+      if (progress >= 1.0) {
+        this.group.remove(exp.group);
+        this.explosions.splice(i, 1);
+      } else {
+        const scale = 1.0 + progress * 2.5;
+        exp.fireball.scale.set(scale, scale, scale);
+        exp.shockwave.scale.set(scale * 1.6, scale * 1.6, 1);
+        const op = Math.max(0, 1.0 - progress);
+        (exp.fireball.material as THREE.MeshBasicMaterial).opacity = op * 0.95;
+        (exp.shockwave.material as THREE.MeshBasicMaterial).opacity = op * 0.85;
+        exp.light.intensity = 8.0 * (1.0 - progress);
+      }
+    }
+
+    // 4. Poças de Lodo Tóxico Ativas (Dano contínuo & Lentidão)
+    let playerInSludge = false;
+    let worstSlowMult = 1.0;
+
+    for (let i = 0; i < this.toxicZones.length; i++) {
+      const tz = this.toxicZones[i];
+      for (let b = 0; b < tz.bubbles.length; b++) {
+        const bubble = tz.bubbles[b];
+        bubble.position.y += delta * 0.35;
+        if (bubble.position.y > 0.4) {
+          bubble.position.y = 0.08;
+        }
+      }
+
+      if (playerPos) {
+        const distToPlayer = Math.hypot(playerPos.x - tz.pos.x, playerPos.z - tz.pos.z);
+        if (distToPlayer < tz.radius) {
+          playerInSludge = true;
+          if (tz.slowMult < worstSlowMult) {
+            worstSlowMult = tz.slowMult;
+          }
+          tz.tickTimer += delta;
+          if (tz.tickTimer >= 0.55) {
+            tz.tickTimer = 0;
+            onPlayerHazardDamage?.(tz.damagePerSec * 0.55, 'toxic');
+          }
+        }
+      }
+    }
+    onPlayerSlow?.(playerInSludge ? worstSlowMult : 1.0);
+
+    // 5. Arcos Elétricos Tesla (Choque Intermitente)
+    for (let i = 0; i < this.electricArcs.length; i++) {
+      const arc = this.electricArcs[i];
+      arc.cycleTimer += delta;
+      if (arc.hitCooldown > 0) arc.hitCooldown -= delta;
+
+      const totalCycle = arc.activeDuration + arc.inactiveDuration;
+      const cycleMod = arc.cycleTimer % totalCycle;
+      const isNowActive = cycleMod < arc.activeDuration;
+      arc.isActive = isNowActive;
+
+      arc.meshArc.visible = isNowActive;
+      if (isNowActive) {
+        arc.light.intensity = 3.2 + Math.random() * 2.2;
+        arc.light.color.setHex(Math.random() > 0.25 ? 0x38bdf8 : 0x7dd3fc);
+
+        if (playerPos && arc.hitCooldown <= 0) {
+          const distToSegment = this.distancePointToSegment2D(
+            playerPos.x, playerPos.z,
+            arc.posA.x, arc.posA.z,
+            arc.posB.x, arc.posB.z
+          );
+          if (distToSegment < 1.45) {
+            arc.hitCooldown = 0.85;
+            onPlayerHazardDamage?.(arc.damage, 'electric');
+          }
+        }
+      } else {
+        arc.light.intensity = 0;
+      }
+    }
+
+    // 6. Minas Terrestres Táticas (Detecção de Proximidade do Jogador e de Zumbis)
+    for (let i = this.landmines.length - 1; i >= 0; i--) {
+      const mine = this.landmines[i];
+      if (mine.isExploded) continue;
+
+      if (!mine.isTriggered) {
+        mine.pulsePhase += delta * 4;
+        const pulse = 0.5 + Math.sin(mine.pulsePhase) * 0.5;
+        mine.ledLight.intensity = 0.4 + pulse * 1.4;
+
+        let triggered = false;
+        if (playerPos) {
+          const distToPlayer = Math.hypot(playerPos.x - mine.pos.x, playerPos.z - mine.pos.z);
+          if (distToPlayer < mine.radius) {
+            triggered = true;
+          }
+        }
+
+        if (!triggered && zombies) {
+          for (let z = 0; z < zombies.length; z++) {
+            const zomb = zombies[z];
+            if (zomb.state === 'dead') continue;
+            const distZ = Math.hypot(zomb.group.position.x - mine.pos.x, zomb.group.position.z - mine.pos.z);
+            if (distZ < mine.radius) {
+              triggered = true;
+              break;
+            }
+          }
+        }
+
+        if (triggered) {
+          mine.isTriggered = true;
+          mine.ledLight.intensity = 5.0;
+          (mine.ledMesh.material as THREE.MeshBasicMaterial).color.setHex(0xffffff);
+          onMineArmed?.();
+        }
+      } else {
+        mine.fuseTimer -= delta;
+        if (mine.fuseTimer <= 0) {
+          mine.isExploded = true;
+          this.group.remove(mine.group);
+          this.spawnExplosionVisual(mine.pos);
+
+          if (playerPos) {
+            const distToPlayer = Math.hypot(playerPos.x - mine.pos.x, playerPos.z - mine.pos.z);
+            if (distToPlayer <= mine.blastRadius) {
+              const falloff = 1.0 - (distToPlayer / mine.blastRadius) * 0.4;
+              onPlayerHazardDamage?.(Math.round(mine.damage * falloff), 'mine');
+            }
+          }
+
+          if (zombies) {
+            for (let z = 0; z < zombies.length; z++) {
+              const zomb = zombies[z];
+              if (zomb.state === 'dead') continue;
+              const distZ = Math.hypot(zomb.group.position.x - mine.pos.x, zomb.group.position.z - mine.pos.z);
+              if (distZ <= mine.blastRadius) {
+                onZombieDamageFromMine?.(zomb, 200);
+              }
+            }
+          }
+
+          this.landmines.splice(i, 1);
+        }
+      }
     }
   }
 
@@ -96,6 +315,10 @@ export class Environment {
     this.buildOrganicBloodDecals(stageNumber);
     this.buildTacticalSignage(stageNumber);
     this.buildCityStreetLighting(stageNumber);
+
+    // Sistema de Dificuldade de Mapas: Labirintos e Armadilhas Escalonadas
+    this.buildStageMaze(stageNumber);
+    this.buildStageTraps(stageNumber);
   }
 
   // ==========================================
@@ -1907,5 +2130,470 @@ export class Environment {
       pBox.setFromCenterAndSize(new THREE.Vector3(l.x, 1.0, l.z), new THREE.Vector3(0.8, 2.0, 0.8));
       this.obstacles.push(pBox);
     });
+  }
+
+  // ==========================================
+  // SISTEMA DINÂMICO DE LABIRINTOS POR FASE
+  // ==========================================
+
+  private buildStageMaze(stage: number): void {
+    if (stage <= 4) {
+      // TIER 1 (Fases 1-4): Perímetro Aberto
+      this.createMazeBarricade(-28, -28, 6.0, 0.4);
+      this.createMazeBarricade(28, 28, 6.0, -0.4);
+      this.createMazeBarricade(-28, 28, 6.0, 1.2);
+      this.createMazeBarricade(28, -28, 6.0, -1.2);
+      return;
+    }
+
+    if (stage <= 8) {
+      // TIER 2 (Fases 5-8): Quarentena Militar com Gargalos Táticos (Chokepoints)
+      this.createMazeBarricade(-7, -26, 16.0, 0);
+      this.createMazeBarricade(7, 26, 16.0, 0);
+      this.createMazeBarricade(26, -7, 16.0, Math.PI / 2);
+      this.createMazeBarricade(-26, 7, 16.0, Math.PI / 2);
+
+      this.createMazeBarricade(-26, -26, 8.0, 0.3);
+      this.createMazeBarricade(26, 26, 8.0, -0.3);
+      return;
+    }
+
+    if (stage <= 16) {
+      // TIER 3 (Fases 9-16): Labirinto de Contêineres e Bloqueios em Zigue-Zague
+      this.createMazeContainer(-6, -24, 0x1e3a8a, 0);
+      this.createMazeContainer(6, -38, 0x991b1b, 0);
+      this.createMazeBarricade(-10, -31, 8.0, Math.PI / 2);
+
+      this.createMazeContainer(6, 24, 0x166534, 0);
+      this.createMazeContainer(-6, 38, 0x854d0e, 0);
+      this.createMazeBarricade(10, 31, 8.0, Math.PI / 2);
+
+      this.createMazeContainer(24, 6, 0x374151, Math.PI / 2);
+      this.createMazeContainer(38, -6, 0x1e3a8a, Math.PI / 2);
+      this.createMazeBarricade(31, -10, 8.0, 0);
+
+      this.createMazeContainer(-24, -6, 0x991b1b, Math.PI / 2);
+      this.createMazeContainer(-38, 6, 0x166534, Math.PI / 2);
+      this.createMazeBarricade(-31, 10, 8.0, 0);
+      return;
+    }
+
+    if (stage <= 24) {
+      // TIER 4 (Fases 17-24): Complexo de Contenção da Usina (Labirinto Central Concéntrico)
+      this.createMazeBarricade(-7, -13, 13.0, 0);
+      this.createMazeBarricade(7, 13, 13.0, 0);
+      this.createMazeBarricade(13, -7, 13.0, Math.PI / 2);
+      this.createMazeBarricade(-13, 7, 13.0, Math.PI / 2);
+
+      this.createMazeContainer(-10, -28, 0x1e293b, 0);
+      this.createMazeContainer(10, 28, 0x1e293b, 0);
+      this.createMazeContainer(28, -10, 0x7f1d1d, Math.PI / 2);
+      this.createMazeContainer(-28, 10, 0x14532d, Math.PI / 2);
+
+      this.createMazeBarricade(-22, -22, 10.0, 0.78);
+      this.createMazeBarricade(22, 22, 10.0, 0.78);
+      this.createMazeBarricade(-22, 22, 10.0, -0.78);
+      this.createMazeBarricade(22, -22, 10.0, -0.78);
+      return;
+    }
+
+    // TIER 5 (Fases 25-32): Pesadelo Apocalíptico Total: Mega-Labirinto Interconectado
+    this.createMazeBarricade(-7, -12, 12.0, 0);
+    this.createMazeBarricade(7, 12, 12.0, 0);
+    this.createMazeBarricade(12, -7, 12.0, Math.PI / 2);
+    this.createMazeBarricade(-12, 7, 12.0, Math.PI / 2);
+
+    this.createMazeContainer(-8, -26, 0x991b1b, 0);
+    this.createMazeContainer(8, -38, 0x1e3a8a, 0);
+    this.createMazeBarricade(-12, -32, 9.0, Math.PI / 2);
+
+    this.createMazeContainer(8, 26, 0x166534, 0);
+    this.createMazeContainer(-8, 38, 0x854d0e, 0);
+    this.createMazeBarricade(12, 32, 9.0, Math.PI / 2);
+
+    this.createMazeContainer(26, 8, 0x374151, Math.PI / 2);
+    this.createMazeContainer(38, -8, 0x991b1b, Math.PI / 2);
+    this.createMazeBarricade(32, -12, 9.0, 0);
+
+    this.createMazeContainer(-26, -8, 0x1e3a8a, Math.PI / 2);
+    this.createMazeContainer(-38, 8, 0x166534, Math.PI / 2);
+    this.createMazeBarricade(-32, 12, 9.0, 0);
+
+    this.createMazeBarricade(-42, -24, 12.0, 0);
+    this.createMazeBarricade(42, 24, 12.0, 0);
+    this.createMazeBarricade(-24, 42, 12.0, Math.PI / 2);
+    this.createMazeBarricade(24, -42, 12.0, Math.PI / 2);
+  }
+
+  // ==========================================
+  // SISTEMA DINÂMICO DE ARMADILHAS POR FASE
+  // ==========================================
+
+  private buildStageTraps(stage: number): void {
+    if (stage <= 4) {
+      this.createActiveToxicZone(-24, 24, 2.2, 4, 0.85);
+      return;
+    }
+
+    if (stage <= 8) {
+      this.createLandmine(12, -22);
+      this.createLandmine(-12, 22);
+      this.createLandmine(22, 12);
+
+      this.createActiveToxicZone(-18, -20, 2.5, 6, 0.75);
+      this.createActiveToxicZone(18, 20, 2.5, 6, 0.75);
+      return;
+    }
+
+    if (stage <= 16) {
+      this.createElectricArc(18, -16, 18, -26);
+      this.createElectricArc(-18, 16, -18, 26);
+
+      this.createLandmine(-8, -28);
+      this.createLandmine(8, -42);
+      this.createLandmine(8, 28);
+      this.createLandmine(-8, 42);
+      this.createLandmine(28, 8);
+      this.createLandmine(-28, -8);
+
+      this.createActiveToxicZone(-14, -18, 2.6, 8, 0.65);
+      this.createActiveToxicZone(14, 18, 2.6, 8, 0.65);
+      this.createActiveToxicZone(18, -14, 2.4, 8, 0.65);
+      this.createActiveToxicZone(-18, 14, 2.4, 8, 0.65);
+      this.createActiveToxicZone(0, -46, 2.8, 8, 0.65);
+      return;
+    }
+
+    if (stage <= 24) {
+      this.createElectricArc(-13, -6, -13, 6);
+      this.createElectricArc(13, -6, 13, 6);
+      this.createElectricArc(-6, -13, 6, -13);
+      this.createElectricArc(-6, 13, 6, 13);
+
+      this.createLandmine(-9, -18);
+      this.createLandmine(9, 18);
+      this.createLandmine(18, -9);
+      this.createLandmine(-18, 9);
+      this.createLandmine(-16, -28);
+      this.createLandmine(16, 28);
+      this.createLandmine(28, 16);
+      this.createLandmine(-28, -16);
+      this.createLandmine(0, 32);
+
+      this.createActiveToxicZone(-10, -10, 2.6, 10, 0.60);
+      this.createActiveToxicZone(10, 10, 2.6, 10, 0.60);
+      this.createActiveToxicZone(-20, 20, 2.8, 10, 0.60);
+      this.createActiveToxicZone(20, -20, 2.8, 10, 0.60);
+      this.createActiveToxicZone(-32, 0, 2.6, 10, 0.60);
+      this.createActiveToxicZone(32, 0, 2.6, 10, 0.60);
+      this.createActiveToxicZone(0, -32, 2.8, 10, 0.60);
+      return;
+    }
+
+    // TIER 5 (Fases 25-32)
+    this.createElectricArc(-12, -5, -12, 5);
+    this.createElectricArc(12, -5, 12, 5);
+    this.createElectricArc(-5, -12, 5, -12);
+    this.createElectricArc(-5, 12, 5, 12);
+    this.createElectricArc(-28, -20, -28, -32);
+    this.createElectricArc(28, 20, 28, 32);
+
+    this.createLandmine(-8, -16);
+    this.createLandmine(8, 16);
+    this.createLandmine(16, -8);
+    this.createLandmine(-16, 8);
+    this.createLandmine(-14, -28);
+    this.createLandmine(14, 28);
+    this.createLandmine(28, 14);
+    this.createLandmine(-28, -14);
+    this.createLandmine(-24, 24);
+    this.createLandmine(24, -24);
+    this.createLandmine(0, -38);
+    this.createLandmine(0, 38);
+
+    this.createActiveToxicZone(-9, -9, 2.8, 12, 0.55);
+    this.createActiveToxicZone(9, 9, 2.8, 12, 0.55);
+    this.createActiveToxicZone(-18, 18, 3.0, 12, 0.55);
+    this.createActiveToxicZone(18, -18, 3.0, 12, 0.55);
+    this.createActiveToxicZone(-34, -12, 2.8, 12, 0.55);
+    this.createActiveToxicZone(34, 12, 2.8, 12, 0.55);
+    this.createActiveToxicZone(-12, 34, 2.8, 12, 0.55);
+    this.createActiveToxicZone(12, -34, 2.8, 12, 0.55);
+    this.createActiveToxicZone(0, -48, 3.2, 12, 0.55);
+    this.createActiveToxicZone(0, 48, 3.2, 12, 0.55);
+  }
+
+  // --- MÉTODOS AUXILIARES DE CONSTRUÇÃO DE ELEMENTOS FÍSICOS E ARMADILHAS ---
+
+  private createMazeBarricade(x: number, z: number, length: number = 5.0, rotY: number = 0): void {
+    const bGroup = new THREE.Group();
+    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 });
+    const concrete = new THREE.Mesh(new THREE.BoxGeometry(length, 1.2, 0.8), concreteMat);
+    concrete.position.y = 0.6;
+    bGroup.add(concrete);
+
+    const stripeMat = new THREE.MeshBasicMaterial({ map: Environment.getHazardStripeTexture() });
+    const stripeFace = new THREE.Mesh(new THREE.PlaneGeometry(length * 0.9, 0.4), stripeMat);
+    stripeFace.position.set(0, 0.6, 0.41);
+    bGroup.add(stripeFace);
+
+    const stripeBack = new THREE.Mesh(new THREE.PlaneGeometry(length * 0.9, 0.4), stripeMat);
+    stripeBack.rotation.y = Math.PI;
+    stripeBack.position.set(0, 0.6, -0.41);
+    bGroup.add(stripeBack);
+
+    const wireMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.4 });
+    const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, length * 0.95, 6), wireMat);
+    wire.rotation.z = Math.PI / 2;
+    wire.position.y = 1.35;
+    bGroup.add(wire);
+
+    bGroup.position.set(x, 0, z);
+    bGroup.rotation.y = rotY;
+    this.group.add(bGroup);
+
+    const bBox = new THREE.Box3();
+    const halfLen = length / 2;
+    const cos = Math.cos(rotY);
+    const sin = Math.sin(rotY);
+    const extX = Math.abs(cos * halfLen) + Math.abs(sin * 0.45);
+    const extZ = Math.abs(sin * halfLen) + Math.abs(cos * 0.45);
+    bBox.min.set(x - extX, 0, z - extZ);
+    bBox.max.set(x + extX, 1.4, z + extZ);
+    this.obstacles.push(bBox);
+  }
+
+  private createMazeContainer(x: number, z: number, colorHex: number = 0x1e3a8a, rotY: number = 0): void {
+    const cGroup = new THREE.Group();
+    const w = 7.2;
+    const h = 2.7;
+    const d = 2.6;
+
+    const contMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.75, metalness: 0.25 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), contMat);
+    body.position.y = h / 2;
+    cGroup.add(body);
+
+    const stripeMat = new THREE.MeshBasicMaterial({ map: Environment.getHazardStripeTexture() });
+    const stripe = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.85, 0.5), stripeMat);
+    stripe.position.set(0, h * 0.5, d / 2 + 0.02);
+    cGroup.add(stripe);
+
+    cGroup.position.set(x, 0, z);
+    cGroup.rotation.y = rotY;
+    this.group.add(cGroup);
+
+    const cBox = new THREE.Box3();
+    const cos = Math.cos(rotY);
+    const sin = Math.sin(rotY);
+    const extX = Math.abs(cos * (w / 2)) + Math.abs(sin * (d / 2));
+    const extZ = Math.abs(sin * (w / 2)) + Math.abs(cos * (d / 2));
+    cBox.min.set(x - extX, 0, z - extZ);
+    cBox.max.set(x + extX, h, z + extZ);
+    this.obstacles.push(cBox);
+  }
+
+  private createLandmine(x: number, z: number): void {
+    const mGroup = new THREE.Group();
+
+    const baseGeo = new THREE.CylinderGeometry(0.55, 0.62, 0.14, 16);
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x222a27, roughness: 0.6, metalness: 0.8 });
+    const base = new THREE.Mesh(baseGeo, baseMat);
+    base.position.y = 0.07;
+    mGroup.add(base);
+
+    const ringGeo = new THREE.RingGeometry(0.38, 0.58, 16);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xeab308, side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.145;
+    mGroup.add(ring);
+
+    const domeGeo = new THREE.CylinderGeometry(0.22, 0.25, 0.08, 12);
+    const domeMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.5, metalness: 0.9 });
+    const dome = new THREE.Mesh(domeGeo, domeMat);
+    dome.position.y = 0.16;
+    mGroup.add(dome);
+
+    const ledGeo = new THREE.SphereGeometry(0.07, 8, 8);
+    const ledMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    const ledMesh = new THREE.Mesh(ledGeo, ledMat);
+    ledMesh.position.y = 0.22;
+    mGroup.add(ledMesh);
+
+    const ledLight = new THREE.PointLight(0xef4444, 1.2, 4.0, 1.8);
+    ledLight.position.set(0, 0.35, 0);
+    mGroup.add(ledLight);
+    this.floorLights.push(ledLight);
+
+    mGroup.position.set(x, 0, z);
+    this.group.add(mGroup);
+
+    this.landmines.push({
+      group: mGroup,
+      pos: new THREE.Vector3(x, 0, z),
+      radius: 1.8,
+      blastRadius: 4.2,
+      damage: 24,
+      isArmed: true,
+      isTriggered: false,
+      fuseTimer: 0.35,
+      isExploded: false,
+      ledMesh,
+      ledLight,
+      pulsePhase: Math.random() * Math.PI * 2,
+    });
+  }
+
+  private createElectricArc(x1: number, z1: number, x2: number, z2: number): void {
+    const arcGroup = new THREE.Group();
+
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7, metalness: 0.6 });
+    const postGeo = new THREE.CylinderGeometry(0.2, 0.24, 2.2, 8);
+
+    const postA = new THREE.Mesh(postGeo, postMat);
+    postA.position.set(x1, 1.1, z1);
+    arcGroup.add(postA);
+
+    const postB = new THREE.Mesh(postGeo, postMat);
+    postB.position.set(x2, 1.1, z2);
+    arcGroup.add(postB);
+
+    const hazardMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+    const signA = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.35), hazardMat);
+    signA.position.set(x1, 1.6, z1 + 0.26);
+    arcGroup.add(signA);
+
+    const signB = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.35), hazardMat);
+    signB.position.set(x2, 1.6, z2 + 0.26);
+    arcGroup.add(signB);
+
+    const midX = (x1 + x2) / 2;
+    const midZ = (z1 + z2) / 2;
+    const dist = Math.hypot(x2 - x1, z2 - z1);
+    const angle = Math.atan2(z2 - z1, x2 - x1);
+
+    const beamGeo = new THREE.CylinderGeometry(0.08, 0.08, dist, 8);
+    const beamMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.9 });
+    const beam = new THREE.Mesh(beamGeo, beamMat);
+    beam.rotation.z = Math.PI / 2;
+    beam.rotation.y = -angle;
+    beam.position.set(midX, 1.1, midZ);
+    arcGroup.add(beam);
+
+    const light = new THREE.PointLight(0x38bdf8, 3.5, 9.0, 1.5);
+    light.position.set(midX, 1.3, midZ);
+    arcGroup.add(light);
+    this.floorLights.push(light);
+
+    this.group.add(arcGroup);
+
+    this.electricArcs.push({
+      group: arcGroup,
+      posA: new THREE.Vector3(x1, 0, z1),
+      posB: new THREE.Vector3(x2, 0, z2),
+      meshArc: beam,
+      light,
+      cycleTimer: Math.random() * 2.0,
+      activeDuration: 2.2,
+      inactiveDuration: 1.6,
+      isActive: true,
+      damage: 18,
+      hitCooldown: 0,
+    });
+  }
+
+  private createActiveToxicZone(x: number, z: number, radius: number = 2.4, dps: number = 8, slowMult: number = 0.65): void {
+    const tGroup = new THREE.Group();
+
+    const poolGeo = new THREE.PlaneGeometry(radius * 2, radius * 2);
+    const poolMat = new THREE.MeshBasicMaterial({
+      map: Environment.getToxicSludgeTexture(),
+      transparent: true,
+      opacity: 0.92,
+    });
+    const pool = new THREE.Mesh(poolGeo, poolMat);
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.y = 0.024;
+    tGroup.add(pool);
+
+    const tLight = new THREE.PointLight(0x22c55e, 1.8, radius * 2.5, 1.6);
+    tLight.position.set(0, 0.5, 0);
+    tGroup.add(tLight);
+    this.floorLights.push(tLight);
+
+    const bubbles: THREE.Mesh[] = [];
+    const bubbleMat = new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.85 });
+    for (let i = 0; i < 4; i++) {
+      const bMesh = new THREE.Mesh(new THREE.SphereGeometry(0.1 + Math.random() * 0.08, 8, 8), bubbleMat);
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * (radius * 0.7);
+      bMesh.position.set(Math.cos(angle) * dist, 0.08, Math.sin(angle) * dist);
+      tGroup.add(bMesh);
+      bubbles.push(bMesh);
+    }
+
+    const drumMat = new THREE.MeshStandardMaterial({ color: 0xa16207, roughness: 0.8 });
+    const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.9, 10), drumMat);
+    drum.rotation.z = Math.PI / 2;
+    drum.position.set(radius * 0.6, 0.22, 0);
+    tGroup.add(drum);
+
+    tGroup.position.set(x, 0, z);
+    this.group.add(tGroup);
+
+    this.toxicZones.push({
+      mesh: pool,
+      pos: new THREE.Vector3(x, 0, z),
+      radius,
+      damagePerSec: dps,
+      slowMult,
+      light: tLight,
+      bubbles,
+      tickTimer: 0,
+    });
+  }
+
+  public spawnExplosionVisual(pos: THREE.Vector3): void {
+    const expGroup = new THREE.Group();
+
+    const fireGeo = new THREE.SphereGeometry(1.2, 12, 12);
+    const fireMat = new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.95 });
+    const fireball = new THREE.Mesh(fireGeo, fireMat);
+    fireball.position.y = 1.0;
+    expGroup.add(fireball);
+
+    const ringGeo = new THREE.RingGeometry(0.6, 1.4, 20);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+    const shockwave = new THREE.Mesh(ringGeo, ringMat);
+    shockwave.rotation.x = -Math.PI / 2;
+    shockwave.position.y = 0.05;
+    expGroup.add(shockwave);
+
+    const light = new THREE.PointLight(0xffedd5, 8.0, 16.0, 1.2);
+    light.position.set(0, 1.5, 0);
+    expGroup.add(light);
+
+    expGroup.position.copy(pos);
+    this.group.add(expGroup);
+
+    this.explosions.push({
+      group: expGroup,
+      fireball,
+      shockwave,
+      light,
+      timer: 0,
+      duration: 0.45,
+    });
+  }
+
+  private distancePointToSegment2D(px: number, pz: number, x1: number, z1: number, x2: number, z2: number): number {
+    const l2 = (x2 - x1) * (x2 - x1) + (z2 - z1) * (z2 - z1);
+    if (l2 === 0) return Math.hypot(px - x1, pz - z1);
+    let t = ((px - x1) * (x2 - x1) + (pz - z1) * (z2 - z1)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    const projX = x1 + t * (x2 - x1);
+    const projZ = z1 + t * (z2 - z1);
+    return Math.hypot(px - projX, pz - projZ);
   }
 }

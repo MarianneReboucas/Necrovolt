@@ -977,4 +977,112 @@ export class SoundEffects {
   public isMuted(): boolean {
     return this.muted;
   }
+
+  /**
+   * Explosão de mina terrestre ou barril combustível
+   */
+  public playExplosion(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain || !this.noiseBuffer) return;
+
+    const t = ctx.currentTime;
+    const noise = ctx.createBufferSource();
+    noise.buffer = this.noiseBuffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(850, t);
+    filter.frequency.exponentialRampToValueAtTime(60, t + 0.65);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.9, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.7);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+
+    noise.start(t);
+    noise.stop(t + 0.75);
+
+    // Impacto sub-grave
+    const subOsc = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(120, t);
+    subOsc.frequency.exponentialRampToValueAtTime(30, t + 0.55);
+    subGain.gain.setValueAtTime(0.85, t);
+    subGain.gain.exponentialRampToValueAtTime(0.01, t + 0.55);
+    subOsc.connect(subGain);
+    subGain.connect(this.sfxGain);
+    subOsc.start(t);
+    subOsc.stop(t + 0.58);
+  }
+
+  /**
+   * Bip tático de armamento de mina de proximidade
+   */
+  public playMineBeep(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1900, t);
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.09);
+  }
+
+  /**
+   * Descarga elétrica sob contato (arco voltaico)
+   */
+  public playElectricShock(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(380, t);
+    osc.frequency.linearRampToValueAtTime(100, t + 0.18);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(900, t);
+    filter.Q.setValueAtTime(3, t);
+    gain.gain.setValueAtTime(0.5, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.22);
+  }
+
+  /**
+   * Chiado corrosivo de ácido / lodo tóxico
+   */
+  public playAcidSizzle(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain || !this.noiseBuffer) return;
+    const t = ctx.currentTime;
+    const noise = ctx.createBufferSource();
+    noise.buffer = this.noiseBuffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1500, t);
+    filter.Q.setValueAtTime(4.5, t);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.28, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+    noise.start(t);
+    noise.stop(t + 0.26);
+  }
 }

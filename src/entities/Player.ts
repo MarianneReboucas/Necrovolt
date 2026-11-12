@@ -527,8 +527,14 @@ export class Player {
     }
   }
 
+  public hazardSpeedMult: number = 1.0;
+
   public applySpeedModifier(speedMultiplier: number): void {
     this.speed = GAME_CONFIG.player.baseSpeed * speedMultiplier;
+  }
+
+  public setHazardSpeedModifier(hazardMult: number): void {
+    this.hazardSpeedMult = hazardMult;
   }
 
   public update(
@@ -585,7 +591,7 @@ export class Player {
     const isMoving = input.x !== 0 || input.z !== 0;
     if (isMoving) {
       const sprintMult = isRunning ? 1.65 : 1.0;
-      const moveDistance = this.speed * sprintMult * delta;
+      const moveDistance = this.speed * this.hazardSpeedMult * sprintMult * delta;
 
       let worldDx = input.x;
       let worldDz = input.z;
@@ -660,6 +666,7 @@ export class Player {
     this.hp = this.maxHp;
     this.isDead = false;
     this.iFrameTimer = 0;
+    this.hazardSpeedMult = 1.0;
     this.coatMat.color.setHex(this.currentSkinJacketColor);
     this.group.position.set(0, 0, 0);
     this.group.rotation.set(0, 0, 0);

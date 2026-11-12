@@ -587,7 +587,58 @@ class Game {
       this.dog.update(delta, targetPos, this.player.group.rotation.y, [], () => {});
     }
 
-    this.environment.update(delta);
+    this.environment.update(
+      delta,
+      isPlaying ? this.player.getPosition() : undefined,
+      (dmg, type) => {
+        if (this.player.takeDamage(dmg)) {
+          this.tookDamageThisStage = true;
+          this.sfx.playPlayerHurt();
+          if (type === 'mine') {
+            this.sfx.playExplosion();
+            this.uiManager.showHazardToast('💥 MINA TERRESTRE DETONADA!', '#ef4444');
+          } else if (type === 'electric') {
+            this.sfx.playElectricShock();
+            this.uiManager.showHazardToast('⚡ DESCARGA ELÉTRICA: CHOQUE!', '#38bdf8');
+          } else if (type === 'toxic') {
+            this.sfx.playAcidSizzle();
+            this.uiManager.showHazardToast('☣️ LODO TÓXICO: CORROSÃO & LENTIDÃO!', '#22c55e');
+          }
+
+          if (this.player.isDead) {
+            this.sfx.setMusicMode('menu');
+            const timeStr = this.formatTime(this.stageManager.stageTime);
+            this.uiManager.showGameOver(this.stageManager.stageKills, timeStr);
+          }
+        }
+      },
+      (slowMult) => {
+        this.player.setHazardSpeedModifier(slowMult);
+      },
+      isPlaying ? this.zombieManager.zombies : undefined,
+      (zombie, mineDmg) => {
+        this.zombieManager.damageZombie(
+          zombie,
+          mineDmg,
+          () => {
+            this.sfx.playHitSound();
+          },
+          (killed) => {
+            this.sfx.playZombieDeath();
+            const zConf = GAME_CONFIG.zombieTypes[killed.type];
+            this.progression.addXp(zConf.xpValue);
+            this.progression.addCoins(Math.round(zConf.xpValue * 0.5));
+            this.progression.recordKillAchievement();
+            if (killed.type === 'boss') this.progression.recordBossDefeated();
+            const stageFinished = this.stageManager.recordKill(killed.type === 'boss');
+            if (stageFinished) this.handleStageCleared();
+          }
+        );
+      },
+      () => {
+        this.sfx.playMineBeep();
+      }
+    );
     if (this.cameraMode === 'first_person' && isPlaying) {
       this.sceneManager.updateCamera(
         this.player.getPosition(),

@@ -2213,6 +2213,35 @@ html, body {
   z-index: 100;
 }
 
+/* Toast de Alerta de Perigo / Armadilha Ambiental */
+.hazard-toast {
+  position: fixed;
+  top: 14%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.94);
+  border: 1.5px solid #ef4444;
+  color: #ffffff;
+  padding: 0.55rem 1.4rem;
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.85), 0 0 12px rgba(239, 68, 68, 0.4);
+  pointer-events: none;
+  z-index: 120;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+.hazard-toast.hidden {
+  opacity: 0;
+  pointer-events: none;
+  display: none !important;
+}
+
 /* ==========================================================================
    ETAPA 2: RESPONSIVIDADE TOTAL PARA DISPOSITIVOS MÓVEIS (TABLETS & SMARTPHONES)
    Suporta modo Retrato (Portrait) e Paisagem (Landscape) com Safe Areas

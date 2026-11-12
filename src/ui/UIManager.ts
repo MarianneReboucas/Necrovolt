@@ -76,6 +76,8 @@ export class UIManager {
 
   private isProcessingAction: boolean = false;
   private activeShopTab: 'weapons' | 'upgrades' = 'weapons';
+  private hazardToast: HTMLElement | null = null;
+  private hazardToastTimer: number | null = null;
 
   constructor(progression: ProgressionSystem) {
     this.progression = progression;
@@ -114,6 +116,7 @@ export class UIManager {
     this.menuPlayerCoins = document.getElementById('menu-player-coins') as HTMLElement;
     this.shopCoinsDisplay = document.getElementById('shop-coins-display') as HTMLElement;
     this.shopFeedback = document.getElementById('shop-feedback') as HTMLElement;
+    this.hazardToast = document.getElementById('hazard-toast');
 
     this.resultStageName = document.getElementById('result-stage-name') as HTMLElement;
     this.resultKills = document.getElementById('result-kills') as HTMLElement;
@@ -427,9 +430,20 @@ export class UIManager {
       this.mapSelectedTitle.innerHTML = `${config.name} ${isCleared ? '<span style="color: #4ade80; font-size: 0.85rem; margin-left: 8px; font-weight: 900; text-shadow: 0 0 8px rgba(74,222,128,0.8);">[PASSOU ✓]</span>' : ''}`;
     }
 
+    let mapHazardInfo = '🛣️ Perímetro Urbano Aberto';
+    if (stageNumber >= 25) {
+      mapHazardInfo = '🔥 Mega-Labirinto Devastado (6 Arcos Tesla • 12 Minas • Lodo Tóxico)';
+    } else if (stageNumber >= 17) {
+      mapHazardInfo = '⚡ Labirinto de Contenção (Anel de Muros • 4 Arcos Tesla • 9 Minas)';
+    } else if (stageNumber >= 9) {
+      mapHazardInfo = '📦 Labirinto Industrial (Contêineres • 2 Arcos Tesla • 6 Minas)';
+    } else if (stageNumber >= 5) {
+      mapHazardInfo = '🚧 Gargalos Militares (3 Minas Terrestres • Poças Ácidas)';
+    }
+
     const bossText = config.hasBoss ? ` • ⚠️ CHEFE: ${config.bossName}` : '';
     if (this.mapSelectedDesc) {
-      this.mapSelectedDesc.textContent = `Meta: ${config.targetKills} zumbis • Recompensa: +${config.rewards.xp} XP • +${config.rewards.coins} 🪙${bossText}`;
+      this.mapSelectedDesc.innerHTML = `Meta: <strong>${config.targetKills} zumbis</strong> • Recompensa: <strong>+${config.rewards.xp} XP</strong> • <strong>+${config.rewards.coins} 🪙</strong>${bossText}<br><span style="color: #38bdf8; font-size: 0.8rem; margin-top: 4px; display: inline-block;">🗺️ <strong>Ambiente:</strong> ${mapHazardInfo}</span>`;
     }
 
     if (this.btnLaunchExpedition) {
@@ -985,5 +999,25 @@ export class UIManager {
 
   public isPlaying(): boolean {
     return this.state === 'playing';
+  }
+
+  public showHazardToast(msg: string, borderColor: string = '#ef4444'): void {
+    if (!this.hazardToast) {
+      this.hazardToast = document.getElementById('hazard-toast');
+    }
+    if (!this.hazardToast) return;
+
+    this.hazardToast.textContent = msg;
+    this.hazardToast.style.borderColor = borderColor;
+    this.hazardToast.style.boxShadow = `0 0 25px rgba(0, 0, 0, 0.85), 0 0 14px ${borderColor}`;
+    this.hazardToast.classList.remove('hidden');
+
+    if (this.hazardToastTimer) {
+      window.clearTimeout(this.hazardToastTimer);
+    }
+    this.hazardToastTimer = window.setTimeout(() => {
+      this.hazardToast?.classList.add('hidden');
+      this.hazardToastTimer = null;
+    }, 1800);
   }
 }
