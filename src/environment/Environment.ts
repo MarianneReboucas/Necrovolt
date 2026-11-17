@@ -15,7 +15,7 @@ export interface TrapLandmine {
   fuseTimer: number;
   isExploded: boolean;
   ledMesh: THREE.Mesh;
-  ledLight: THREE.PointLight;
+  glowRing: THREE.Mesh;
   pulsePhase: number;
 }
 
@@ -24,7 +24,7 @@ export interface TrapElectricArc {
   posA: THREE.Vector3;
   posB: THREE.Vector3;
   meshArc: THREE.Mesh;
-  light: THREE.PointLight;
+  glowFloor: THREE.Mesh;
   cycleTimer: number;
   activeDuration: number;
   inactiveDuration: number;
@@ -39,7 +39,6 @@ export interface TrapToxicZone {
   radius: number;
   damagePerSec: number;
   slowMult: number;
-  light: THREE.PointLight;
   bubbles: THREE.Mesh[];
   tickTimer: number;
 }
@@ -48,7 +47,6 @@ export interface ExplosionVisual {
   group: THREE.Group;
   fireball: THREE.Mesh;
   shockwave: THREE.Mesh;
-  light: THREE.PointLight;
   timer: number;
   duration: number;
 }
@@ -167,7 +165,6 @@ export class Environment {
         const op = Math.max(0, 1.0 - progress);
         (exp.fireball.material as THREE.MeshBasicMaterial).opacity = op * 0.95;
         (exp.shockwave.material as THREE.MeshBasicMaterial).opacity = op * 0.85;
-        exp.light.intensity = 8.0 * (1.0 - progress);
       }
     }
 
@@ -214,9 +211,9 @@ export class Environment {
       arc.isActive = isNowActive;
 
       arc.meshArc.visible = isNowActive;
+      arc.glowFloor.visible = isNowActive;
       if (isNowActive) {
-        arc.light.intensity = 3.2 + Math.random() * 2.2;
-        arc.light.color.setHex(Math.random() > 0.25 ? 0x38bdf8 : 0x7dd3fc);
+        (arc.meshArc.material as THREE.MeshBasicMaterial).color.setHex(Math.random() > 0.25 ? 0x38bdf8 : 0x7dd3fc);
 
         if (playerPos && arc.hitCooldown <= 0) {
           const distToSegment = this.distancePointToSegment2D(
@@ -229,8 +226,6 @@ export class Environment {
             onPlayerHazardDamage?.(arc.damage, 'electric');
           }
         }
-      } else {
-        arc.light.intensity = 0;
       }
     }
 
@@ -242,7 +237,7 @@ export class Environment {
       if (!mine.isTriggered) {
         mine.pulsePhase += delta * 4;
         const pulse = 0.5 + Math.sin(mine.pulsePhase) * 0.5;
-        mine.ledLight.intensity = 0.4 + pulse * 1.4;
+        (mine.glowRing.material as THREE.MeshBasicMaterial).opacity = 0.14 + pulse * 0.24;
 
         let triggered = false;
         if (playerPos) {
@@ -266,7 +261,7 @@ export class Environment {
 
         if (triggered) {
           mine.isTriggered = true;
-          mine.ledLight.intensity = 5.0;
+          (mine.glowRing.material as THREE.MeshBasicMaterial).opacity = 0.65;
           (mine.ledMesh.material as THREE.MeshBasicMaterial).color.setHex(0xffffff);
           onMineArmed?.();
         }
@@ -1937,12 +1932,14 @@ export class Environment {
       fireCone.position.y = 1.35;
       fGroup.add(fireCone);
 
-      // Ponto de luz quente crepitante
-      const fireLight = new THREE.PointLight(0xf97316, 2.5, 14, 1.4);
-      fireLight.position.set(0, 1.4, 0);
-      fGroup.add(fireLight);
-      this.floorLights.push(fireLight);
-      this.animatedFires.push({ light: fireLight, baseIntensity: 2.5, phase: Math.random() * 10 });
+      // Halo luminoso leve no chão (sem PointLight pesada por barril)
+      const fireHalo = new THREE.Mesh(
+        new THREE.CircleGeometry(2.6, 14),
+        new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.16 })
+      );
+      fireHalo.rotation.x = -Math.PI / 2;
+      fireHalo.position.set(0, 0.02, 0);
+      fGroup.add(fireHalo);
 
       fGroup.position.set(fp.x, 0, fp.z);
       this.group.add(fGroup);
@@ -1980,12 +1977,6 @@ export class Environment {
       drumTumbled.rotation.z = Math.PI / 2;
       drumTumbled.position.set(tz.x + 0.6, 0.25, tz.z);
       this.group.add(drumTumbled);
-
-      // Luz verde radioativa
-      const toxicLight = new THREE.PointLight(0x22c55e, 1.6, 10, 1.5);
-      toxicLight.position.set(tz.x, 0.8, tz.z);
-      this.group.add(toxicLight);
-      this.floorLights.push(toxicLight);
     });
 
     // C. CAIXAS DE SUPRIMENTOS E PILHAS DE PNEUS
@@ -2107,18 +2098,13 @@ export class Environment {
       lampHead.position.set(l.x, 4.1, l.z);
       this.group.add(lampHead);
 
-      const pLight = new THREE.PointLight(l.col, 2.4, 24.0, 1.2);
-      pLight.position.set(l.x, 3.8, l.z);
-      this.group.add(pLight);
-      this.floorLights.push(pLight);
-
-      // PARTE 4: Piscina de luz atmosférica projetada no chão abaixo do poste
+      // PARTE 4: Piscina de luz atmosférica projetada no chão abaixo do poste (zero custo de shader)
       const pool = new THREE.Mesh(
-        new THREE.CircleGeometry(5.2, 24),
+        new THREE.CircleGeometry(5.2, 20),
         new THREE.MeshBasicMaterial({
           color: l.col,
           transparent: true,
-          opacity: 0.16,
+          opacity: 0.22,
         })
       );
       pool.rotation.x = -Math.PI / 2;
@@ -2421,10 +2407,12 @@ export class Environment {
     ledMesh.position.y = 0.22;
     mGroup.add(ledMesh);
 
-    const ledLight = new THREE.PointLight(0xef4444, 1.2, 4.0, 1.8);
-    ledLight.position.set(0, 0.35, 0);
-    mGroup.add(ledLight);
-    this.floorLights.push(ledLight);
+    const glowRingGeo = new THREE.CircleGeometry(1.15, 16);
+    const glowRingMat = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.25 });
+    const glowRing = new THREE.Mesh(glowRingGeo, glowRingMat);
+    glowRing.rotation.x = -Math.PI / 2;
+    glowRing.position.y = 0.025;
+    mGroup.add(glowRing);
 
     mGroup.position.set(x, 0, z);
     this.group.add(mGroup);
@@ -2440,7 +2428,7 @@ export class Environment {
       fuseTimer: 0.35,
       isExploded: false,
       ledMesh,
-      ledLight,
+      glowRing,
       pulsePhase: Math.random() * Math.PI * 2,
     });
   }
@@ -2481,10 +2469,13 @@ export class Environment {
     beam.position.set(midX, 1.1, midZ);
     arcGroup.add(beam);
 
-    const light = new THREE.PointLight(0x38bdf8, 3.5, 9.0, 1.5);
-    light.position.set(midX, 1.3, midZ);
-    arcGroup.add(light);
-    this.floorLights.push(light);
+    const glowFloorGeo = new THREE.PlaneGeometry(dist, 1.8);
+    const glowFloorMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.22 });
+    const glowFloor = new THREE.Mesh(glowFloorGeo, glowFloorMat);
+    glowFloor.rotation.x = -Math.PI / 2;
+    glowFloor.rotation.z = -angle;
+    glowFloor.position.set(midX, 0.025, midZ);
+    arcGroup.add(glowFloor);
 
     this.group.add(arcGroup);
 
@@ -2493,7 +2484,7 @@ export class Environment {
       posA: new THREE.Vector3(x1, 0, z1),
       posB: new THREE.Vector3(x2, 0, z2),
       meshArc: beam,
-      light,
+      glowFloor,
       cycleTimer: Math.random() * 2.0,
       activeDuration: 2.2,
       inactiveDuration: 1.6,
@@ -2516,11 +2507,6 @@ export class Environment {
     pool.rotation.x = -Math.PI / 2;
     pool.position.y = 0.024;
     tGroup.add(pool);
-
-    const tLight = new THREE.PointLight(0x22c55e, 1.8, radius * 2.5, 1.6);
-    tLight.position.set(0, 0.5, 0);
-    tGroup.add(tLight);
-    this.floorLights.push(tLight);
 
     const bubbles: THREE.Mesh[] = [];
     const bubbleMat = new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.85 });
@@ -2548,7 +2534,6 @@ export class Environment {
       radius,
       damagePerSec: dps,
       slowMult,
-      light: tLight,
       bubbles,
       tickTimer: 0,
     });
@@ -2570,10 +2555,6 @@ export class Environment {
     shockwave.position.y = 0.05;
     expGroup.add(shockwave);
 
-    const light = new THREE.PointLight(0xffedd5, 8.0, 16.0, 1.2);
-    light.position.set(0, 1.5, 0);
-    expGroup.add(light);
-
     expGroup.position.copy(pos);
     this.group.add(expGroup);
 
@@ -2581,7 +2562,6 @@ export class Environment {
       group: expGroup,
       fireball,
       shockwave,
-      light,
       timer: 0,
       duration: 0.45,
     });
