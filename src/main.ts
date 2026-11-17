@@ -250,16 +250,45 @@ class Game {
     }
   }
 
+  private boundLoop = this.loop.bind(this);
+  private perfFrames = 0;
+  private perfLastSample = performance.now();
+  private perfEl: HTMLElement | null = null;
+  private perfVisible = true;
+
   private startLoop(): void {
     this.lastTime = performance.now();
-    requestAnimationFrame(this.loop.bind(this));
+    this.perfLastSample = this.lastTime;
+
+    const el = document.createElement('div');
+    el.id = 'perf-telemetry-hud';
+    el.style.cssText =
+      'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:9999;' +
+      'background:rgba(9,13,22,0.82);border:1px solid rgba(56,189,248,0.45);border-radius:6px;' +
+      'padding:4px 10px;font-family:monospace;font-size:11px;color:#e2e8f0;pointer-events:none;' +
+      'white-space:nowrap;backdrop-filter:blur(4px);';
+    el.textContent = 'FPS: -- | Frame: --ms | Calls: -- | Tris: --';
+    document.body.appendChild(el);
+    this.perfEl = el;
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'F8') {
+        e.preventDefault();
+        this.perfVisible = !this.perfVisible;
+        if (this.perfEl) this.perfEl.style.display = this.perfVisible ? 'block' : 'none';
+      }
+    });
+
+    requestAnimationFrame(this.boundLoop);
   }
 
   private loop(currentTime: number): void {
-    requestAnimationFrame(this.loop.bind(this));
+    requestAnimationFrame(this.boundLoop);
 
-    const delta = Math.min((currentTime - this.lastTime) / 1000, 0.1);
+    const rawFrameMs = currentTime - this.lastTime;
+    const delta = Math.min(rawFrameMs / 1000, 0.1);
     this.lastTime = currentTime;
+    this.perfFrames++;
 
     if (this.inputManager.consumePause()) {
       this.uiManager.togglePause();
@@ -650,6 +679,24 @@ class Game {
       this.sceneManager.updateCamera(this.player.getPosition(), delta);
     }
     this.sceneManager.render();
+
+    const elapsedMs = currentTime - this.perfLastSample;
+    if (elapsedMs >= 500) {
+      const fps = Math.round((this.perfFrames * 1000) / elapsedMs);
+      const avgFrameMs = +(elapsedMs / Math.max(1, this.perfFrames)).toFixed(1);
+      const info = this.sceneManager.getRenderInfo();
+      (window as unknown as { __necrovoltPerf: unknown }).__necrovoltPerf = {
+        fps,
+        avgFrameMs,
+        ...info,
+      };
+      if (this.perfVisible && this.perfEl) {
+        this.perfEl.textContent =
+          `FPS: ${fps} | Frame: ${avgFrameMs}ms | Calls: ${info.calls} | Tris: ${info.triangles} | Geos: ${info.geometries} | Tex: ${info.textures} (F8)`;
+      }
+      this.perfFrames = 0;
+      this.perfLastSample = currentTime;
+    }
   }
 
   private handleStageCleared(): void {

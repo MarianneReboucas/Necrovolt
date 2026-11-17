@@ -679,14 +679,15 @@ export class Player {
   }
 
   private checkCollision(x: number, z: number, obstacles: THREE.Box3[]): boolean {
-    const playerRadius = GAME_CONFIG.player.radius;
-    const playerBox = new THREE.Box3(
-      new THREE.Vector3(x - playerRadius, 0, z - playerRadius),
-      new THREE.Vector3(x + playerRadius, 2.2, z + playerRadius)
-    );
+    const r = GAME_CONFIG.player.radius;
+    const minX = x - r;
+    const maxX = x + r;
+    const minZ = z - r;
+    const maxZ = z + r;
 
     for (let i = 0; i < obstacles.length; i++) {
-      if (playerBox.intersectsBox(obstacles[i])) {
+      const obs = obstacles[i];
+      if (maxX >= obs.min.x && minX <= obs.max.x && maxZ >= obs.min.z && minZ <= obs.max.z && obs.max.y >= 0) {
         return true;
       }
     }

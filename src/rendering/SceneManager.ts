@@ -21,6 +21,13 @@ export class SceneManager {
   public fpYaw: number = 0;
   public fpPitch: number = 0;
 
+  // Objetos pré-alocados para zero alocação por frame em raycast/mira
+  private raycaster: THREE.Raycaster = new THREE.Raycaster();
+  private rayMouse: THREE.Vector2 = new THREE.Vector2();
+  private groundPlane: THREE.Plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  private worldTarget: THREE.Vector3 = new THREE.Vector3();
+  private fpAimTarget: THREE.Vector3 = new THREE.Vector3();
+
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0a111a); // Noite urbana clara e nítida
@@ -51,8 +58,8 @@ export class SceneManager {
       precision: isMobile ? 'mediump' : 'highp',
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    // Em celular usa resolução nativa 1.0x para máxima fluidez sem aquecer o aparelho
-    this.renderer.setPixelRatio(isMobile ? 1.0 : Math.min(window.devicePixelRatio, 2.0));
+    // Limita pixelRatio em 1.25x no desktop e 1.0x no celular para manter nitidez sem sobrecarregar preenchimento de tela HiDPI
+    this.renderer.setPixelRatio(isMobile ? 1.0 : Math.min(window.devicePixelRatio, 1.25));
     // Tonalidade cinematográfica e fidelidade de cor sRGB
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.25;
@@ -72,7 +79,7 @@ export class SceneManager {
 
   private setupAtmosphericParticles(): void {
     const isMobile = isMobileDevice();
-    const count = isMobile ? 35 : 180;
+    const count = isMobile ? 25 : 90;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
@@ -116,12 +123,12 @@ export class SceneManager {
     );
     moonLight.position.set(34, 52, 28);
     moonLight.castShadow = !isMobile;
-    const shadowRes = 2048;
+    const shadowRes = 1024;
     moonLight.shadow.mapSize.width = shadowRes;
     moonLight.shadow.mapSize.height = shadowRes;
     moonLight.shadow.camera.near = 0.5;
-    moonLight.shadow.camera.far = 150;
-    const d = 58;
+    moonLight.shadow.camera.far = 140;
+    const d = 44;
     moonLight.shadow.camera.left = -d;
     moonLight.shadow.camera.right = d;
     moonLight.shadow.camera.top = d;
@@ -155,25 +162,17 @@ export class SceneManager {
     const crystalMat = new THREE.MeshBasicMaterial({ color: 0x4ade80 });
 
     crystalPositions.forEach((pos) => {
-      // No celular dispensa PointLights dinâmicas que recalculam cada pixel da tela
-      if (!isMobile) {
-        const pLight = new THREE.PointLight(0x22c55e, 2.8, 9, 1.8);
-        pLight.position.copy(pos);
-        this.scene.add(pLight);
-        this.toxicLights.push(pLight);
-      }
-
       const crystal = new THREE.Mesh(crystalGeo, crystalMat);
       crystal.position.copy(pos);
       crystal.scale.set(0.9, 1.5, 0.9);
       this.scene.add(crystal);
 
-      // Poça de lodo / radiação verde no chão ao redor do cristal
-      const puddleGeo = new THREE.CircleGeometry(1.4, 16);
+      // Poça de lodo / radiação verde no chão ao redor do cristal (halos emissivos sem PointLight extra)
+      const puddleGeo = new THREE.CircleGeometry(1.6, 16);
       const puddleMat = new THREE.MeshBasicMaterial({
-        color: 0x15803d,
+        color: 0x16a34a,
         transparent: true,
-        opacity: 0.55,
+        opacity: 0.45,
       });
       const puddle = new THREE.Mesh(puddleGeo, puddleMat);
       puddle.rotation.x = -Math.PI / 2;
@@ -188,7 +187,7 @@ export class SceneManager {
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       const isMobile = isMobileDevice();
-      this.renderer.setPixelRatio(isMobile ? 1.0 : Math.min(window.devicePixelRatio, 2.0));
+      this.renderer.setPixelRatio(isMobile ? 1.0 : Math.min(window.devicePixelRatio, 1.25));
     });
   }
 
@@ -253,31 +252,39 @@ export class SceneManager {
     }
   }
 
-  // Ponto no mundo 3D para onde a mira em 1ª Pessoa está apontando
+  // Ponto no mundo 3D para onde a mira em 1ª Pessoa está apontando (zero alocação por frame)
   public getFirstPersonAimTarget(playerPos: THREE.Vector3): THREE.Vector3 {
     const dirX = Math.sin(this.fpYaw) * Math.cos(this.fpPitch);
     const dirY = Math.sin(this.fpPitch);
     const dirZ = Math.cos(this.fpYaw) * Math.cos(this.fpPitch);
-    return new THREE.Vector3(
+    this.fpAimTarget.set(
       playerPos.x + dirX * 60,
       playerPos.y + 1.68 + dirY * 60,
       playerPos.z + dirZ * 60
     );
+    return this.fpAimTarget;
   }
 
-  // Converte a posição do mouse na tela para as coordenadas X/Z exatas no chão 3D
+  // Converte a posição do mouse na tela para as coordenadas X/Z exatas no chão 3D (zero alocação por frame)
   public screenToWorldPoint(screenX: number, screenY: number): THREE.Vector3 {
-    const normX = (screenX / window.innerWidth) * 2 - 1;
-    const normY = -(screenY / window.innerHeight) * 2 + 1;
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(normX, normY), this.camera);
-    const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const target = new THREE.Vector3();
-    const hit = raycaster.ray.intersectPlane(ground, target);
+    this.rayMouse.x = (screenX / window.innerWidth) * 2 - 1;
+    this.rayMouse.y = -(screenY / window.innerHeight) * 2 + 1;
+    this.raycaster.setFromCamera(this.rayMouse, this.camera);
+    const hit = this.raycaster.ray.intersectPlane(this.groundPlane, this.worldTarget);
     if (!hit) {
-      target.set(0, 0, 0);
+      this.worldTarget.set(0, 0, 0);
     }
-    return target;
+    return this.worldTarget;
+  }
+
+  public getRenderInfo() {
+    return {
+      calls: this.renderer.info.render.calls,
+      triangles: this.renderer.info.render.triangles,
+      geometries: this.renderer.info.memory.geometries,
+      textures: this.renderer.info.memory.textures,
+      programs: this.renderer.info.programs?.length ?? 0,
+    };
   }
 
   public render(): void {

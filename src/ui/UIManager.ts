@@ -78,6 +78,7 @@ export class UIManager {
   private activeShopTab: 'weapons' | 'upgrades' = 'weapons';
   private hazardToast: HTMLElement | null = null;
   private hazardToastTimer: number | null = null;
+  private lastHudKey: string = '';
 
   constructor(progression: ProgressionSystem) {
     this.progression = progression;
@@ -964,9 +965,14 @@ export class UIManager {
     targetKills: number,
     stageTitleStr: string
   ): void {
+    const ceilHp = Math.ceil(hp);
+    const hudKey = `${ceilHp}|${maxHp}|${ammo}|${maxAmmo}|${isReloading}|${weaponName}|${kills}|${targetKills}|${stageTitleStr}`;
+    if (hudKey === this.lastHudKey) return;
+    this.lastHudKey = hudKey;
+
     const hpPct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
     this.hpBarFill.style.width = `${hpPct}%`;
-    this.hpText.textContent = `${Math.ceil(hp)} / ${maxHp}`;
+    this.hpText.textContent = `${ceilHp} / ${maxHp}`;
 
     if (isReloading) {
       this.ammoCount.textContent = `RECARREGANDO...`;

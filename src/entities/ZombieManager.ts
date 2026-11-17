@@ -920,18 +920,25 @@ export class ZombieManager {
 
   private checkCollision(x: number, z: number, obstacles: THREE.Box3[], isBoss: boolean): boolean {
     const r = isBoss ? 1.0 : 0.45;
-    const box = new THREE.Box3(
-      new THREE.Vector3(x - r, 0, z - r),
-      new THREE.Vector3(x + r, 2.0, z + r)
-    );
+    const minX = x - r;
+    const maxX = x + r;
+    const minZ = z - r;
+    const maxZ = z + r;
     for (let i = 0; i < obstacles.length; i++) {
-      if (box.intersectsBox(obstacles[i])) return true;
+      const obs = obstacles[i];
+      if (maxX >= obs.min.x && minX <= obs.max.x && maxZ >= obs.min.z && minZ <= obs.max.z && obs.max.y >= 0) {
+        return true;
+      }
     }
     return false;
   }
 
   public getActiveCount(): number {
-    return this.zombies.filter((z) => z.state !== 'dead').length;
+    let count = 0;
+    for (let i = 0; i < this.zombies.length; i++) {
+      if (this.zombies[i].state !== 'dead') count++;
+    }
+    return count;
   }
 
   // Retorna a lista de zumbis vivos para o cão companheiro farejar e atacar

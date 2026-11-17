@@ -87,9 +87,9 @@ export class Environment {
   public toxicZones: TrapToxicZone[] = [];
   public explosions: ExplosionVisual[] = [];
 
-  // Luzes dinâmicas com animação (chamas, sirenes)
+  // Luzes dinâmicas com animação (chamas, sirenes por material emissivo leve)
   private animatedFires: { light: THREE.PointLight; baseIntensity: number; phase: number }[] = [];
-  private animatedSirens: { light: THREE.PointLight; colA: number; colB: number; timer: number }[] = [];
+  private animatedSirens: { mat: THREE.MeshBasicMaterial; colA: number; colB: number; timer: number }[] = [];
 
   // Texturas de Canvas procedurais em cache
   private static bloodTexture: THREE.CanvasTexture | null = null;
@@ -106,11 +106,22 @@ export class Environment {
     this.buildMapForStage(stageNumber);
   }
 
-  // Limpa o mapa atual e reconstrói o ambiente para a nova fase
+  // Limpa o mapa atual, libera geometrias/materiais da GPU e reconstrói o ambiente para a nova fase
   public loadStageMap(stageNumber: number): void {
+    this.group.traverse((obj) => {
+      if ((obj as THREE.Mesh).isMesh) {
+        const mesh = obj as THREE.Mesh;
+        mesh.geometry?.dispose();
+        const mat = mesh.material;
+        if (Array.isArray(mat)) {
+          mat.forEach((m) => m.dispose());
+        } else if (mat) {
+          mat.dispose();
+        }
+      }
+    });
     while (this.group.children.length > 0) {
-      const child = this.group.children[0];
-      this.group.remove(child);
+      this.group.remove(this.group.children[0]);
     }
     this.obstacles = [];
     this.floorLights = [];
@@ -142,12 +153,12 @@ export class Environment {
       f.light.intensity = f.baseIntensity * (1 + flicker * 0.35);
     }
 
-    // 2. Sirenes de viaturas de polícia (alterna vermelho / azul)
+    // 2. Sirenes de viaturas de polícia e ambulância (alterna vermelho / azul via material sem PointLight)
     for (let i = 0; i < this.animatedSirens.length; i++) {
       const s = this.animatedSirens[i];
       s.timer += delta * 4;
       const isRed = Math.floor(s.timer) % 2 === 0;
-      s.light.color.setHex(isRed ? s.colA : s.colB);
+      s.mat.color.setHex(isRed ? s.colA : s.colB);
     }
 
     // 3. Efeitos visuais de explosão
@@ -1115,15 +1126,11 @@ export class Environment {
       bGroup.add(antMast);
 
       const redLightMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.2, 8, 8),
+        new THREE.SphereGeometry(0.24, 8, 8),
         new THREE.MeshBasicMaterial({ color: 0xef4444 })
       );
       redLightMesh.position.set(opts.w * 0.3, opts.h + 5.0, -opts.d * 0.3);
       bGroup.add(redLightMesh);
-
-      const beaconLight = new THREE.PointLight(0xef4444, 1.2, 10);
-      beaconLight.position.set(opts.w * 0.3, opts.h + 5.1, -opts.d * 0.3);
-      bGroup.add(beaconLight);
     }
 
     // 10. Heliponto
@@ -1511,17 +1518,12 @@ export class Environment {
 
     // Detalhes especiais por tipo de veículo:
     if (def.type === 'police') {
-      // Giroflex policial
-      const sirenBar = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 1.2), new THREE.MeshBasicMaterial({ color: 0x0284c7 }));
+      // Giroflex policial animado via material (sem PointLight pesada)
+      const sirenMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
+      const sirenBar = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 1.25), sirenMat);
       sirenBar.position.set(-length * 0.08, height + 0.08, 0);
       carMeshContainer.add(sirenBar);
-
-      // Luzes piscantes
-      const sirenLight = new THREE.PointLight(0xef4444, 2.0, 10, 1.4);
-      sirenLight.position.set(-length * 0.08, height + 0.4, 0);
-      carMeshContainer.add(sirenLight);
-      this.floorLights.push(sirenLight);
-      this.animatedSirens.push({ light: sirenLight, colA: 0xef4444, colB: 0x0284c7, timer: Math.random() * 5 });
+      this.animatedSirens.push({ mat: sirenMat, colA: 0xef4444, colB: 0x0284c7, timer: Math.random() * 5 });
     } else if (def.type === 'ambulance') {
       // Cruz vermelha médica nas laterais
       const crossMat = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
@@ -1534,12 +1536,12 @@ export class Environment {
       sideStripe2.position.set(0, height * 0.45, -width * 0.505);
       carMeshContainer.add(sideStripe2);
 
-      // Giroflex vermelho
-      const ambLight = new THREE.PointLight(0xdc2626, 1.8, 9, 1.4);
-      ambLight.position.set(-length * 0.08, height + 0.3, 0);
-      carMeshContainer.add(ambLight);
-      this.floorLights.push(ambLight);
-      this.animatedSirens.push({ light: ambLight, colA: 0xdc2626, colB: 0xffffff, timer: Math.random() * 5 });
+      // Giroflex vermelho/branco animado via material (sem PointLight pesada)
+      const ambMat = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
+      const ambBar = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.9), ambMat);
+      ambBar.position.set(-length * 0.08, height + 0.08, 0);
+      carMeshContainer.add(ambBar);
+      this.animatedSirens.push({ mat: ambMat, colA: 0xdc2626, colB: 0xffffff, timer: Math.random() * 5 });
     } else if (def.type === 'taxi') {
       // Letreiro no teto
       const taxiSign = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
@@ -1551,12 +1553,13 @@ export class Environment {
       hatch.position.set(-length * 0.08, height + 0.08, 0);
       carMeshContainer.add(hatch);
     } else if (def.type === 'wreck') {
-      // Carro carbonizado com fumaça / brasa sutil
-      const emberLight = new THREE.PointLight(0xf97316, 1.0, 5.0, 1.5);
-      emberLight.position.set(length * 0.2, height * 0.3, 0);
-      carMeshContainer.add(emberLight);
-      this.floorLights.push(emberLight);
-      this.animatedFires.push({ light: emberLight, baseIntensity: 1.0, phase: Math.random() * 10 });
+      // Brasa sutil no motor carbonizado via material emissivo (sem PointLight)
+      const emberMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.28, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.75 })
+      );
+      emberMesh.position.set(length * 0.22, height * 0.3, 0);
+      carMeshContainer.add(emberMesh);
     }
 
     // Se o carro estiver capotado, gira de lado e adiciona cacos de vidro no asfalto
