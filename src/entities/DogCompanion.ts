@@ -27,11 +27,11 @@ export class DogCompanion {
   private barkTimer: number = 2.0; // Intervalo para latidos ocasionais
   private pounceTime: number = 0;
 
-  // Atributos de combate
-  public damage: number = 32;
-  public speed: number = 8.5; // Ágil e rápido para alcançar os zumbis
+  // Atributos de combate (apoio tático equilibrado sem roubar os abates do jogador)
+  public damage: number = 10;
+  public speed: number = 7.2;
   public attackRange: number = 1.35;
-  public detectionRange: number = 13.0;
+  public detectionRange: number = 7.5;
 
   constructor(scene: THREE.Scene, initialPlayerPos: THREE.Vector3) {
     this.scene = scene;
@@ -313,7 +313,7 @@ export class DogCompanion {
 
       // Realiza ataque de mordida com bote
       if (this.biteCooldown <= 0) {
-        this.biteCooldown = 0.65;
+        this.biteCooldown = 1.35;
         this.pounceTime = 0.35;
         onBite?.();
         onAttack(this.targetZombie, this.damage);
