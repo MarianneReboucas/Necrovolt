@@ -62,7 +62,7 @@ export class SceneManager {
     this.renderer.setPixelRatio(isMobile ? 1.0 : Math.min(window.devicePixelRatio, 1.25));
     // Tonalidade cinematográfica e fidelidade de cor sRGB
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.25;
+    this.renderer.toneMappingExposure = 1.45;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     // Em celulares, DESLIGA mapa de sombras dinâmico para eliminar centenas de draw calls por frame
     this.renderer.shadowMap.enabled = !isMobile;
