@@ -639,15 +639,32 @@ class Game {
         this.sfx.playMineBeep();
       }
     );
-    if (this.cameraMode === 'first_person' && isPlaying) {
-      this.sceneManager.updateCamera(
-        this.player.getPosition(),
-        delta,
-        this.inputManager.fpYaw,
-        this.inputManager.fpPitch
-      );
+    if (isPlaying) {
+      if (this.cameraMode === 'first_person') {
+        this.sceneManager.updateCamera(
+          this.player.getPosition(),
+          delta,
+          this.inputManager.fpYaw,
+          this.inputManager.fpPitch
+        );
+      } else {
+        this.sceneManager.updateCamera(this.player.getPosition(), delta);
+      }
     } else {
-      this.sceneManager.updateCamera(this.player.getPosition(), delta);
+      // Órbita cinematográfica 360° suave na tela inicial (sem conflito com updateCamera)
+      const angle = currentTime * 0.00025;
+      const targetPos = this.player.getPosition();
+      const radius = 14;
+      this.sceneManager.camera.position.set(
+        targetPos.x + Math.sin(angle) * radius,
+        GAME_CONFIG.camera.offset.y * 0.75,
+        targetPos.z + Math.cos(angle) * radius
+      );
+      this.sceneManager.camera.lookAt(
+        targetPos.x,
+        targetPos.y + GAME_CONFIG.camera.lookAtOffsetY,
+        targetPos.z
+      );
     }
     this.sceneManager.render();
   }
