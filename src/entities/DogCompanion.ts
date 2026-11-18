@@ -327,13 +327,19 @@ export class DogCompanion {
 
     const isMoving = moveSpeed > 0 && distToTarget > 0.15;
 
-    if (distToTarget > 0.05) {
-      // Gira suavemente na direção do alvo
+    if (isMoving) {
+      // Gira suavemente na direção do alvo de movimentação
       const targetAngle = Math.atan2(dx, dz);
       let angleDiff = targetAngle - this.group.rotation.y;
       while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
       while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
       this.group.rotation.y += angleDiff * Math.min(1.0, delta * 14.0);
+    } else if (this.state === 'follow') {
+      // Parado ao lado do jogador: alinha-se calmamente com a direção do dono sem oscilações
+      let angleDiff = playerFacingAngle - this.group.rotation.y;
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      this.group.rotation.y += angleDiff * Math.min(1.0, delta * 5.0);
     }
 
     if (isMoving) {

@@ -583,9 +583,7 @@ class Game {
         currentStage.name
       );
     } else {
-      const orbitSpeed = currentTime * 0.00025;
       const targetPos = this.player.getPosition();
-      this.sceneManager.camera.position.x = targetPos.x + Math.sin(orbitSpeed) * 4;
       this.dog.update(delta, targetPos, this.player.group.rotation.y, [], () => {});
     }
 

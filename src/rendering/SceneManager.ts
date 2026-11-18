@@ -235,9 +235,10 @@ export class SceneManager {
       );
     } else {
       // 3ª Pessoa: Suave interpolação da câmera isométrica acompanhando o jogador
+      const isMobile = isMobileDevice();
       const desiredX = targetPosition.x + GAME_CONFIG.camera.offset.x;
-      const desiredY = GAME_CONFIG.camera.offset.y;
-      const desiredZ = targetPosition.z + GAME_CONFIG.camera.offset.z;
+      const desiredY = isMobile ? 26.0 : GAME_CONFIG.camera.offset.y;
+      const desiredZ = targetPosition.z + (isMobile ? 18.5 : GAME_CONFIG.camera.offset.z);
 
       const smoothFactor = Math.min(1.0, delta * 6.5);
       this.camera.position.x += (desiredX - this.camera.position.x) * smoothFactor;
