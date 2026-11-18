@@ -309,6 +309,12 @@ export class Environment {
   }
 
   private buildMapForStage(stageNumber: number): void {
+    if (stageNumber === 3) {
+      this.buildForestMap(stageNumber);
+      this.buildStageTraps(stageNumber);
+      return;
+    }
+
     this.buildCityGround(stageNumber);
     this.buildCityStreetGrid(stageNumber);
     this.buildRainPuddles(stageNumber);
@@ -2567,6 +2573,198 @@ export class Environment {
       shockwave,
       timer: 0,
       duration: 0.45,
+    });
+  }
+
+  // ==========================================
+  // CENÁRIO TESTE FASE 3: FLORESTA SOMBRIA
+  // ==========================================
+  private buildForestMap(_stageNumber: number): void {
+    // 1. Solo da Floresta (Musgo e Terra Úmida)
+    const groundGeo = new THREE.PlaneGeometry(140, 140);
+    const groundMat = new THREE.MeshStandardMaterial({
+      color: 0x162617,
+      roughness: 0.95,
+      metalness: 0.02,
+    });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.group.add(ground);
+
+    // Clareira central de terra batida
+    const clearingGeo = new THREE.CircleGeometry(9.5, 24);
+    const dirtMat = new THREE.MeshStandardMaterial({
+      color: 0x2f251b,
+      roughness: 0.96,
+      metalness: 0.02,
+    });
+    const clearing = new THREE.Mesh(clearingGeo, dirtMat);
+    clearing.rotation.x = -Math.PI / 2;
+    clearing.position.y = 0.015;
+    clearing.receiveShadow = true;
+    this.group.add(clearing);
+
+    // Trilhas de terra cruzando a floresta
+    const trailMat = dirtMat;
+    const trailNS = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 92), trailMat);
+    trailNS.rotation.x = -Math.PI / 2;
+    trailNS.position.y = 0.012;
+    trailNS.receiveShadow = true;
+    this.group.add(trailNS);
+
+    const trailEW = new THREE.Mesh(new THREE.PlaneGeometry(92, 4.2), trailMat);
+    trailEW.rotation.x = -Math.PI / 2;
+    trailEW.position.y = 0.012;
+    trailEW.receiveShadow = true;
+    this.group.add(trailEW);
+
+    // Materiais e Geometrias compartilhadas para performance (60 FPS)
+    const trunkGeo = new THREE.CylinderGeometry(0.32, 0.48, 3.2, 7);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3b271a, roughness: 0.92 });
+
+    const foliageGeo1 = new THREE.ConeGeometry(2.3, 3.4, 7);
+    const foliageGeo2 = new THREE.ConeGeometry(1.75, 2.8, 7);
+    const foliageGeo3 = new THREE.ConeGeometry(1.15, 2.2, 7);
+    const pineMatA = new THREE.MeshStandardMaterial({ color: 0x143822, roughness: 0.85 });
+    const pineMatB = new THREE.MeshStandardMaterial({ color: 0x1a472a, roughness: 0.85 });
+
+    const rockGeo = new THREE.DodecahedronGeometry(1.15, 0);
+    const rockMat = new THREE.MeshStandardMaterial({
+      color: 0x3f4743,
+      roughness: 0.9,
+      flatShading: true,
+    });
+
+    const logGeo = new THREE.CylinderGeometry(0.32, 0.36, 4.2, 7);
+    const mushroomCapGeo = new THREE.ConeGeometry(0.28, 0.22, 6);
+    const mushroomMat = new THREE.MeshBasicMaterial({ color: 0x4ade80 });
+
+    const spawnPineTree = (x: number, z: number, scale: number = 1, addCollision: boolean = true) => {
+      const tree = new THREE.Group();
+      tree.position.set(x, 0, z);
+      tree.scale.setScalar(scale);
+
+      const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+      trunk.position.y = 1.6;
+      trunk.castShadow = true;
+      trunk.receiveShadow = true;
+      tree.add(trunk);
+
+      const fMat = (Math.abs(Math.round(x + z)) % 2 === 0) ? pineMatA : pineMatB;
+
+      const c1 = new THREE.Mesh(foliageGeo1, fMat);
+      c1.position.y = 3.6;
+      c1.castShadow = true;
+      tree.add(c1);
+
+      const c2 = new THREE.Mesh(foliageGeo2, fMat);
+      c2.position.y = 5.1;
+      c2.castShadow = true;
+      tree.add(c2);
+
+      const c3 = new THREE.Mesh(foliageGeo3, fMat);
+      c3.position.y = 6.4;
+      tree.add(c3);
+
+      this.group.add(tree);
+
+      if (addCollision) {
+        const r = 0.55 * scale;
+        this.obstacles.push(
+          new THREE.Box3(
+            new THREE.Vector3(x - r, 0, z - r),
+            new THREE.Vector3(x + r, 4, z + r)
+          )
+        );
+      }
+    };
+
+    // 2. Borda densa da arena florestal (mantém jogador e zumbis dentro de [-46, 46])
+    for (let i = -46; i <= 46; i += 4.5) {
+      spawnPineTree(i, -47, 1.15 + (Math.abs(i) % 3) * 0.1, true);
+      spawnPineTree(i, 47, 1.15 + (Math.abs(i + 1) % 3) * 0.1, true);
+      spawnPineTree(-47, i, 1.15 + (Math.abs(i + 2) % 3) * 0.1, true);
+      spawnPineTree(47, i, 1.15 + (Math.abs(i) % 3) * 0.1, true);
+    }
+
+    // 3. Árvores internas espalhadas (preservando a clareira central e as trilhas)
+    const treePositions: [number, number, number][] = [
+      [-12, -12, 1.1], [-18, -8, 0.95], [-25, -16, 1.25], [-34, -10, 1.05],
+      [12, -13, 1.05], [20, -9, 1.2], [28, -18, 0.95], [36, -12, 1.15],
+      [-13, 13, 1.15], [-22, 11, 1.0], [-30, 20, 1.2], [-38, 14, 0.95],
+      [13, 12, 1.0], [21, 15, 1.15], [31, 11, 1.05], [38, 22, 1.2],
+      [-14, -28, 1.2], [-28, -32, 1.1], [15, -27, 1.05], [29, -34, 1.25],
+      [-16, 29, 1.1], [-32, 34, 1.2], [17, 28, 1.15], [33, 35, 1.0],
+      [-7, -22, 0.9], [8, -21, 0.95], [-8, 22, 1.0], [9, 23, 0.9],
+      [-23, -3, 1.1], [24, 3, 1.05], [-36, -2, 1.2], [35, -3, 1.15],
+    ];
+
+    treePositions.forEach(([x, z, s]) => spawnPineTree(x, z, s, true));
+
+    // 4. Rochas musgosas
+    const rockPositions: [number, number, number][] = [
+      [-10, 7, 1.2], [11, -7, 1.4], [-20, -22, 1.6], [22, 21, 1.5],
+      [-29, 6, 1.3], [27, -14, 1.25], [6, 17, 1.15], [-7, -16, 1.3],
+    ];
+
+    rockPositions.forEach(([x, z, s]) => {
+      const rock = new THREE.Mesh(rockGeo, rockMat);
+      rock.position.set(x, 0.55 * s, z);
+      rock.scale.set(s, s * 0.75, s * 0.9);
+      rock.rotation.set(0.2, x * 0.5, 0.1);
+      rock.castShadow = true;
+      rock.receiveShadow = true;
+      this.group.add(rock);
+
+      const r = 0.95 * s;
+      this.obstacles.push(
+        new THREE.Box3(
+          new THREE.Vector3(x - r, 0, z - r),
+          new THREE.Vector3(x + r, 2.0, z + r)
+        )
+      );
+    });
+
+    // 5. Troncos caídos
+    const fallenLogs: [number, number, number][] = [
+      [-15, 4, 0.4], [15, -4, -0.5], [-5, 29, 1.3], [7, -30, 1.8],
+    ];
+    fallenLogs.forEach(([x, z, rotY]) => {
+      const log = new THREE.Mesh(logGeo, trunkMat);
+      log.position.set(x, 0.32, z);
+      log.rotation.z = Math.PI / 2;
+      log.rotation.y = rotY;
+      log.castShadow = true;
+      log.receiveShadow = true;
+      this.group.add(log);
+
+      const box = new THREE.Box3().setFromObject(log);
+      this.obstacles.push(box);
+    });
+
+    // 6. Fogueira de acampamento na borda da clareira
+    const firePos = new THREE.Vector3(4.5, 0, -4.5);
+    const emberMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.45, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0xf97316 })
+    );
+    emberMesh.position.set(firePos.x, 0.25, firePos.z);
+    this.group.add(emberMesh);
+
+    const fireLight = new THREE.PointLight(0xf97316, 2.4, 18, 1.4);
+    fireLight.position.set(firePos.x, 1.2, firePos.z);
+    this.group.add(fireLight);
+    this.animatedFires.push({ light: fireLight, baseIntensity: 2.4, phase: 0 });
+
+    // 7. Cogumelos bioluminescentes espalhados
+    const mushroomSpots: [number, number][] = [
+      [-11, -10], [11, 10], [-19, 12], [18, -12], [-24, -15], [26, 14],
+    ];
+    mushroomSpots.forEach(([x, z]) => {
+      const cap = new THREE.Mesh(mushroomCapGeo, mushroomMat);
+      cap.position.set(x, 0.22, z);
+      this.group.add(cap);
     });
   }
 
