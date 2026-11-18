@@ -174,28 +174,35 @@ export class ZombieManager {
       let x = 0;
       let z = 0;
 
-      // 50% de chance: vir de nós urbanos temáticos (becos, bueiros distantes, avenidas)
-      // 50% de chance: vir pelas vias e calçadas periféricas fora da tela
-      if (Math.random() < 0.5) {
-        const offscreenNodes = ZombieManager.CITY_SPAWN_NODES.filter(
-          (node) => !this.isPointVisible(node.x, node.z, camera)
-        );
+      if (stageNumber === 2) {
+        // Ponte estreita: zumbis nascem estritamente dentro da pista [-9.5, 9.5] à frente ou atrás do jogador
+        x = (Math.random() - 0.5) * 18;
+        const dir = Math.random() < 0.65 ? -1 : 1;
+        z = playerPos.z + dir * (22 + Math.random() * 16);
+      } else {
+        // 50% de chance: vir de nós urbanos temáticos (becos, bueiros distantes, avenidas)
+        // 50% de chance: vir pelas vias e calçadas periféricas fora da tela
+        if (Math.random() < 0.5) {
+          const offscreenNodes = ZombieManager.CITY_SPAWN_NODES.filter(
+            (node) => !this.isPointVisible(node.x, node.z, camera)
+          );
 
-        if (offscreenNodes.length > 0) {
-          const chosen = offscreenNodes[Math.floor(Math.random() * offscreenNodes.length)];
-          x = chosen.x + (Math.random() - 0.5) * 4.0;
-          z = chosen.z + (Math.random() - 0.5) * 4.0;
+          if (offscreenNodes.length > 0) {
+            const chosen = offscreenNodes[Math.floor(Math.random() * offscreenNodes.length)];
+            x = chosen.x + (Math.random() - 0.5) * 4.0;
+            z = chosen.z + (Math.random() - 0.5) * 4.0;
+          }
+        }
+
+        if (x === 0 && z === 0) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 24 + Math.random() * 12; // 24m a 36m de distância
+          x = playerPos.x + Math.cos(angle) * dist;
+          z = playerPos.z + Math.sin(angle) * dist;
         }
       }
 
-      if (x === 0 && z === 0) {
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 24 + Math.random() * 12; // 24m a 36m de distância
-        x = playerPos.x + Math.cos(angle) * dist;
-        z = playerPos.z + Math.sin(angle) * dist;
-      }
-
-      x = Math.max(-bounds, Math.min(bounds, x));
+      x = stageNumber === 2 ? Math.max(-9.5, Math.min(9.5, x)) : Math.max(-bounds, Math.min(bounds, x));
       z = Math.max(-bounds, Math.min(bounds, z));
 
       // Garante que NUNCA brote visível na tela
