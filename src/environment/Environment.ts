@@ -309,8 +309,28 @@ export class Environment {
   }
 
   private buildMapForStage(stageNumber: number): void {
+    if (stageNumber === 2) {
+      this.buildBridgeMap(stageNumber);
+      this.buildStageTraps(stageNumber);
+      return;
+    }
     if (stageNumber === 3) {
       this.buildForestMap(stageNumber);
+      this.buildStageTraps(stageNumber);
+      return;
+    }
+    if (stageNumber === 4) {
+      this.buildFarmMap(stageNumber);
+      this.buildStageTraps(stageNumber);
+      return;
+    }
+    if (stageNumber === 5) {
+      this.buildMilitaryCampMap(stageNumber);
+      this.buildStageTraps(stageNumber);
+      return;
+    }
+    if (stageNumber >= 6) {
+      this.buildIndustrialMap(stageNumber);
       this.buildStageTraps(stageNumber);
       return;
     }
@@ -2766,6 +2786,350 @@ export class Environment {
       cap.position.set(x, 0.22, z);
       this.group.add(cap);
     });
+  }
+
+  // ==========================================
+  // CAPÍTULO 2: PONTE PARCIALMENTE DESTRUÍDA
+  // ==========================================
+  private buildBridgeMap(_stageNumber: number): void {
+    // Rio escuro abaixo da ponte
+    const waterMat = new THREE.MeshStandardMaterial({
+      color: 0x091a26,
+      roughness: 0.25,
+      metalness: 0.6,
+    });
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(180, 180), waterMat);
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = -3.2;
+    this.group.add(water);
+
+    // Tabuleiro principal da ponte rodoviária
+    const asphaltMat = new THREE.MeshStandardMaterial({
+      color: 0x262b33,
+      roughness: 0.88,
+      metalness: 0.05,
+    });
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(96, 1.2, 96), asphaltMat);
+    deck.position.y = -0.6;
+    deck.receiveShadow = true;
+    this.group.add(deck);
+
+    // Faixas amarelas da rodovia
+    const stripeMat = new THREE.MeshBasicMaterial({ color: 0xeab308 });
+    for (let x = -40; x <= 40; x += 8) {
+      const stripe = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 0.45), stripeMat);
+      stripe.rotation.x = -Math.PI / 2;
+      stripe.position.set(x, 0.02, 0);
+      this.group.add(stripe);
+    }
+
+    // Muretas / Guardrails laterais e bordas da ponte (com colisão)
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.7, metalness: 0.3 });
+    const addBarrier = (x: number, z: number, w: number, h: number, d: number, mat: THREE.Material = railMat) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      mesh.position.set(x, h / 2, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      this.group.add(mesh);
+      this.obstacles.push(new THREE.Box3().setFromObject(mesh));
+    };
+
+    // Bordas da arena na ponte
+    addBarrier(0, -47, 96, 1.8, 2);
+    addBarrier(0, 47, 96, 1.8, 2);
+    addBarrier(-47, 0, 2, 1.8, 96);
+    addBarrier(47, 0, 2, 1.8, 96);
+
+    // Pilares/arcos quebrados da ponte para identidade visual
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.85 });
+    [[-30, -44], [0, -44], [30, -44], [-30, 44], [0, 44], [30, 44]].forEach(([px, pz]) => {
+      const pillar = new THREE.Mesh(new THREE.BoxGeometry(2.6, 12, 2.6), pillarMat);
+      pillar.position.set(px, 6, pz);
+      pillar.castShadow = true;
+      this.group.add(pillar);
+    });
+
+    // Barreiras de concreto e destroços espalhados na ponte
+    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.9 });
+    const wreckMat = new THREE.MeshStandardMaterial({ color: 0x451a1a, roughness: 0.8, metalness: 0.35 });
+    const cabMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.75, metalness: 0.4 });
+
+    const blockades: [number, number, number, number, number][] = [
+      [-14, -10, 5.5, 1.3, 1.4],
+      [14, 10, 5.5, 1.3, 1.4],
+      [-24, 14, 1.4, 1.3, 6.0],
+      [24, -14, 1.4, 1.3, 6.0],
+      [-8, 24, 6.5, 1.3, 1.4],
+      [8, -24, 6.5, 1.3, 1.4],
+      [-34, -22, 5.0, 1.4, 2.2],
+      [34, 22, 5.0, 1.4, 2.2],
+    ];
+    blockades.forEach(([x, z, w, h, d]) => addBarrier(x, z, w, h, d, concreteMat));
+
+    // Carcaças de veículos engarrafados/destruídos
+    const wrecks: [number, number, number][] = [
+      [-18, -24, 0.2], [20, -6, -0.35], [-16, 18, 0.45],
+      [18, 26, -0.15], [-32, 4, 0.1], [32, -28, 0.3],
+    ];
+    wrecks.forEach(([x, z, rot]) => {
+      const car = new THREE.Group();
+      car.position.set(x, 0, z);
+      car.rotation.y = rot;
+      const body = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.1, 2.1), wreckMat);
+      body.position.y = 0.65;
+      body.castShadow = true;
+      car.add(body);
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.85, 1.85), cabMat);
+      cabin.position.set(-0.2, 1.55, 0);
+      cabin.castShadow = true;
+      car.add(cabin);
+      this.group.add(car);
+      this.obstacles.push(new THREE.Box3().setFromObject(car));
+    });
+
+    // Barris em chamas iluminando a travessia
+    const fireLight = new THREE.PointLight(0xf97316, 2.5, 22, 1.4);
+    fireLight.position.set(-10, 2.2, -10);
+    this.group.add(fireLight);
+    this.animatedFires.push({ light: fireLight, baseIntensity: 2.5, phase: 1.2 });
+  }
+
+  // ==========================================
+  // CAPÍTULO 4: FAZENDA ISOLADA
+  // ==========================================
+  private buildFarmMap(_stageNumber: number): void {
+    // Campo rural de terra e grama seca
+    const grassMat = new THREE.MeshStandardMaterial({ color: 0x2b3618, roughness: 0.95 });
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), grassMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.group.add(ground);
+
+    const dirtMat = new THREE.MeshStandardMaterial({ color: 0x4a3723, roughness: 0.96 });
+    const yard = new THREE.Mesh(new THREE.CircleGeometry(14, 24), dirtMat);
+    yard.rotation.x = -Math.PI / 2;
+    yard.position.y = 0.015;
+    yard.receiveShadow = true;
+    this.group.add(yard);
+
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
+    const barnRedMat = new THREE.MeshStandardMaterial({ color: 0x7f1d1d, roughness: 0.82 });
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x292524, roughness: 0.85 });
+    const hayMat = new THREE.MeshStandardMaterial({ color: 0xca8a04, roughness: 0.95 });
+    const siloMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5, metalness: 0.55 });
+
+    // Cercas de madeira delimitando a fazenda [-46, 46]
+    const addFence = (x: number, z: number, w: number, d: number) => {
+      const fence = new THREE.Mesh(new THREE.BoxGeometry(w, 1.5, d), woodMat);
+      fence.position.set(x, 0.75, z);
+      fence.castShadow = true;
+      fence.receiveShadow = true;
+      this.group.add(fence);
+      this.obstacles.push(new THREE.Box3().setFromObject(fence));
+    };
+    addFence(0, -47, 94, 1.2);
+    addFence(0, 47, 94, 1.2);
+    addFence(-47, 0, 1.2, 94);
+    addFence(47, 0, 1.2, 94);
+
+    // Celeiro Vermelho (ao norte-oeste)
+    const barn = new THREE.Group();
+    barn.position.set(-22, 0, -22);
+    const barnBody = new THREE.Mesh(new THREE.BoxGeometry(11, 5.5, 8.5), barnRedMat);
+    barnBody.position.y = 2.75;
+    barnBody.castShadow = true;
+    barnBody.receiveShadow = true;
+    barn.add(barnBody);
+    const barnRoof = new THREE.Mesh(new THREE.ConeGeometry(8.2, 3.6, 4), roofMat);
+    barnRoof.position.y = 7.3;
+    barnRoof.rotation.y = Math.PI / 4;
+    barn.add(barnRoof);
+    this.group.add(barn);
+    this.obstacles.push(new THREE.Box3().setFromObject(barnBody));
+
+    // Silo metálico ao lado do celeiro
+    const silo = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 11, 14), siloMat);
+    silo.position.set(-12.5, 5.5, -24);
+    silo.castShadow = true;
+    this.group.add(silo);
+    this.obstacles.push(new THREE.Box3().setFromObject(silo));
+
+    // Fardos de feno espalhados para cobertura tática
+    const hayGeo = new THREE.CylinderGeometry(1.15, 1.15, 1.9, 10);
+    const haySpots: [number, number, number][] = [
+      [11, -10, 0.3], [-11, 11, 1.1], [16, 14, 0.7], [-18, 18, 0.2],
+      [25, -18, 1.4], [-26, -4, 0.5], [8, 26, 0.9], [-8, -28, 0.1],
+    ];
+    haySpots.forEach(([x, z, rot]) => {
+      const hay = new THREE.Mesh(hayGeo, hayMat);
+      hay.position.set(x, 1.15, z);
+      hay.rotation.z = Math.PI / 2;
+      hay.rotation.y = rot;
+      hay.castShadow = true;
+      hay.receiveShadow = true;
+      this.group.add(hay);
+      this.obstacles.push(new THREE.Box3().setFromObject(hay));
+    });
+
+    // Cercados internos quebrados
+    addFence(18, -4, 1.0, 10);
+    addFence(-16, 26, 12, 1.0);
+    addFence(24, 24, 10, 1.0);
+
+    // Lampião quente no pátio da fazenda
+    const lanternLight = new THREE.PointLight(0xfbbf24, 2.2, 20, 1.4);
+    lanternLight.position.set(-15, 3.5, -16);
+    this.group.add(lanternLight);
+  }
+
+  // ==========================================
+  // CAPÍTULO 5: ACAMPAMENTO MILITAR ABANDONADO
+  // ==========================================
+  private buildMilitaryCampMap(_stageNumber: number): void {
+    // Solo de cascalho/areia tática
+    const sandMat = new THREE.MeshStandardMaterial({ color: 0x38352c, roughness: 0.94 });
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), sandMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.group.add(ground);
+
+    // Heliponto central
+    const padMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85 });
+    const helipad = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 7.5, 0.06, 24), padMat);
+    helipad.position.y = 0.03;
+    helipad.receiveShadow = true;
+    this.group.add(helipad);
+
+    const hMarkMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+    const hLeft = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 5.2), hMarkMat);
+    hLeft.rotation.x = -Math.PI / 2;
+    hLeft.position.set(-1.6, 0.07, 0);
+    this.group.add(hLeft);
+    const hRight = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 5.2), hMarkMat);
+    hRight.rotation.x = -Math.PI / 2;
+    hRight.position.set(1.6, 0.07, 0);
+    this.group.add(hRight);
+    const hMid = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.8), hMarkMat);
+    hMid.rotation.x = -Math.PI / 2;
+    hMid.position.set(0, 0.07, 0);
+    this.group.add(hMid);
+
+    // Muros de sacos de areia no perímetro
+    const sandbagMat = new THREE.MeshStandardMaterial({ color: 0x786c52, roughness: 0.95 });
+    const addWall = (x: number, z: number, w: number, h: number, d: number, mat: THREE.Material = sandbagMat) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      mesh.position.set(x, h / 2, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      this.group.add(mesh);
+      this.obstacles.push(new THREE.Box3().setFromObject(mesh));
+    };
+
+    addWall(0, -47, 94, 2.0, 2.0);
+    addWall(0, 47, 94, 2.0, 2.0);
+    addWall(-47, 0, 2.0, 2.0, 94);
+    addWall(47, 0, 2.0, 2.0, 94);
+
+    // Tendas militares verde-oliva
+    const tentMat = new THREE.MeshStandardMaterial({ color: 0x2f3e27, roughness: 0.88 });
+    const tentSpots: [number, number, number][] = [
+      [-20, -20, 0], [20, -20, Math.PI / 2], [-22, 20, 0], [22, 22, 0],
+    ];
+    tentSpots.forEach(([x, z, rot]) => {
+      const tent = new THREE.Mesh(new THREE.BoxGeometry(8.5, 3.6, 5.8), tentMat);
+      tent.position.set(x, 1.8, z);
+      tent.rotation.y = rot;
+      tent.castShadow = true;
+      tent.receiveShadow = true;
+      this.group.add(tent);
+      this.obstacles.push(new THREE.Box3().setFromObject(tent));
+    });
+
+    // Caixas de suprimentos e barricadas de sacos de areia internas
+    const crateMat = new THREE.MeshStandardMaterial({ color: 0x3f4d2b, roughness: 0.8 });
+    const crates: [number, number, number, number, number][] = [
+      [-11, -9, 2.4, 1.6, 2.4], [11, 9, 2.4, 1.6, 2.4],
+      [-12, 12, 4.5, 1.3, 1.3], [12, -12, 4.5, 1.3, 1.3],
+      [0, -24, 6.0, 1.4, 1.5], [0, 24, 6.0, 1.4, 1.5],
+      [-30, 0, 1.8, 1.8, 5.5], [30, 0, 1.8, 1.8, 5.5],
+    ];
+    crates.forEach(([x, z, w, h, d]) => addWall(x, z, w, h, d, crateMat));
+
+    // Holofotes de emergência
+    const floodLight = new THREE.PointLight(0x38bdf8, 2.4, 24, 1.3);
+    floodLight.position.set(0, 6, 0);
+    this.group.add(floodLight);
+  }
+
+  // ==========================================
+  // CAPÍTULO 6+: ÁREA INDUSTRIAL CONTAMINADA
+  // ==========================================
+  private buildIndustrialMap(_stageNumber: number): void {
+    // Piso industrial de concreto rachado
+    const concreteFloorMat = new THREE.MeshStandardMaterial({
+      color: 0x1e242b,
+      roughness: 0.88,
+      metalness: 0.12,
+    });
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), concreteFloorMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.group.add(ground);
+
+    // Muros industriais no perímetro
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.75, metalness: 0.35 });
+    const addBlock = (x: number, z: number, w: number, h: number, d: number, mat: THREE.Material) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      mesh.position.set(x, h / 2, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      this.group.add(mesh);
+      this.obstacles.push(new THREE.Box3().setFromObject(mesh));
+    };
+
+    addBlock(0, -47, 94, 3.2, 2.0, wallMat);
+    addBlock(0, 47, 94, 3.2, 2.0, wallMat);
+    addBlock(-47, 0, 2.0, 3.2, 94, wallMat);
+    addBlock(47, 0, 2.0, 3.2, 94, wallMat);
+
+    // Containers de carga coloridos/enferrujados
+    const containerRed = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.78, metalness: 0.35 });
+    const containerBlue = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.78, metalness: 0.35 });
+    const containerYellow = new THREE.MeshStandardMaterial({ color: 0x854d0e, roughness: 0.78, metalness: 0.35 });
+
+    addBlock(-16, -14, 7.5, 3.2, 3.0, containerRed);
+    addBlock(16, 14, 7.5, 3.2, 3.0, containerBlue);
+    addBlock(-18, 18, 3.0, 3.2, 7.5, containerYellow);
+    addBlock(18, -18, 3.0, 3.2, 7.5, containerRed);
+    addBlock(0, -28, 8.0, 3.2, 3.0, containerBlue);
+    addBlock(0, 28, 8.0, 3.2, 3.0, containerYellow);
+
+    // Tanques químicos cilíndricos gigantes
+    const tankMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.45, metalness: 0.65 });
+    const tankSpots: [number, number][] = [
+      [-32, -26], [32, -26], [-32, 26], [32, 26],
+    ];
+    tankSpots.forEach(([x, z]) => {
+      const tank = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.2, 7.5, 16), tankMat);
+      tank.position.set(x, 3.75, z);
+      tank.castShadow = true;
+      tank.receiveShadow = true;
+      this.group.add(tank);
+      this.obstacles.push(new THREE.Box3().setFromObject(tank));
+    });
+
+    // Poças químicas brilhantes (decorativas + luz verde tóxica)
+    const toxicGlowMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+    [[-10, 0], [10, 0], [0, 14], [0, -14]].forEach(([x, z]) => {
+      const pool = new THREE.Mesh(new THREE.CircleGeometry(2.2, 14), toxicGlowMat);
+      pool.rotation.x = -Math.PI / 2;
+      pool.position.set(x, 0.03, z);
+      this.group.add(pool);
+    });
+
+    const toxicLight = new THREE.PointLight(0x22c55e, 2.5, 22, 1.4);
+    toxicLight.position.set(0, 4, 0);
+    this.group.add(toxicLight);
   }
 
   private distancePointToSegment2D(px: number, pz: number, x1: number, z1: number, x2: number, z2: number): number {
