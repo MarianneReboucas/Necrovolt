@@ -2794,18 +2794,18 @@ export class Environment {
   private buildBridgeMap(_stageNumber: number): void {
     // Rio escuro abaixo da ponte
     const waterMat = new THREE.MeshStandardMaterial({
-      color: 0x091a26,
-      roughness: 0.25,
-      metalness: 0.6,
+      color: 0x071521,
+      roughness: 0.2,
+      metalness: 0.65,
     });
-    const water = new THREE.Mesh(new THREE.PlaneGeometry(180, 180), waterMat);
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), waterMat);
     water.rotation.x = -Math.PI / 2;
-    water.position.y = -3.2;
+    water.position.y = -3.8;
     this.group.add(water);
 
     // Tabuleiro principal da ponte rodoviária
     const asphaltMat = new THREE.MeshStandardMaterial({
-      color: 0x262b33,
+      color: 0x222730,
       roughness: 0.88,
       metalness: 0.05,
     });
@@ -2814,17 +2814,28 @@ export class Environment {
     deck.receiveShadow = true;
     this.group.add(deck);
 
-    // Faixas amarelas da rodovia
+    // Calçadas laterais elevadas da ponte
+    const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x3b424d, roughness: 0.9 });
+    const swNorth = new THREE.Mesh(new THREE.BoxGeometry(96, 0.25, 4), sidewalkMat);
+    swNorth.position.set(0, 0.12, -45);
+    swNorth.receiveShadow = true;
+    this.group.add(swNorth);
+    const swSouth = new THREE.Mesh(new THREE.BoxGeometry(96, 0.25, 4), sidewalkMat);
+    swSouth.position.set(0, 0.12, 45);
+    swSouth.receiveShadow = true;
+    this.group.add(swSouth);
+
+    // Faixas amarelas duplas e tracejadas da rodovia
     const stripeMat = new THREE.MeshBasicMaterial({ color: 0xeab308 });
-    for (let x = -40; x <= 40; x += 8) {
-      const stripe = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 0.45), stripeMat);
+    for (let x = -42; x <= 42; x += 7) {
+      const stripe = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 0.4), stripeMat);
       stripe.rotation.x = -Math.PI / 2;
       stripe.position.set(x, 0.02, 0);
       this.group.add(stripe);
     }
 
     // Muretas / Guardrails laterais e bordas da ponte (com colisão)
-    const railMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.7, metalness: 0.3 });
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.65, metalness: 0.35 });
     const addBarrier = (x: number, z: number, w: number, h: number, d: number, mat: THREE.Material = railMat) => {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
       mesh.position.set(x, h / 2, z);
@@ -2840,20 +2851,57 @@ export class Environment {
     addBarrier(-47, 0, 2, 1.8, 96);
     addBarrier(47, 0, 2, 1.8, 96);
 
-    // Pilares/arcos quebrados da ponte para identidade visual
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.85 });
-    [[-30, -44], [0, -44], [30, -44], [-30, 44], [0, 44], [30, 44]].forEach(([px, pz]) => {
-      const pillar = new THREE.Mesh(new THREE.BoxGeometry(2.6, 12, 2.6), pillarMat);
-      pillar.position.set(px, 6, pz);
-      pillar.castShadow = true;
-      this.group.add(pillar);
+    // Torres de sustentação da ponte estaiada + cabos de aço + luzes de alerta
+    const towerMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8, metalness: 0.25 });
+    const cableMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5, metalness: 0.7 });
+    const beaconMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+
+    [-22, 22].forEach((tx) => {
+      [-44, 44].forEach((tz) => {
+        const tower = new THREE.Mesh(new THREE.BoxGeometry(2.8, 18, 2.8), towerMat);
+        tower.position.set(tx, 9, tz);
+        tower.castShadow = true;
+        this.group.add(tower);
+
+        const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.45, 8, 8), beaconMat);
+        beacon.position.set(tx, 18.4, tz);
+        this.group.add(beacon);
+
+        // Cabos estaiados descendo da torre até o tabuleiro
+        [-14, -7, 7, 14].forEach((offsetX) => {
+          const cableLen = Math.hypot(offsetX, 16);
+          const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, cableLen, 5), cableMat);
+          cable.position.set(tx + offsetX / 2, 9.5, tz);
+          cable.rotation.z = Math.atan2(offsetX, 16);
+          this.group.add(cable);
+        });
+      });
+
+      // Viga transversal ligando as torres no alto
+      const crossBeam = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 88), towerMat);
+      crossBeam.position.set(tx, 16.5, 0);
+      this.group.add(crossBeam);
     });
 
-    // Barreiras de concreto e destroços espalhados na ponte
-    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.9 });
-    const wreckMat = new THREE.MeshStandardMaterial({ color: 0x451a1a, roughness: 0.8, metalness: 0.35 });
-    const cabMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.75, metalness: 0.4 });
+    // Placas de concreto quebradas e vergalhões expostos nas bordas
+    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.92 });
+    const rebarMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.7, metalness: 0.6 });
+    [[-30, -40, 0.2], [12, 41, -0.25], [35, -39, 0.18]].forEach(([rx, rz, tilt]) => {
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.5, 3.2), concreteMat);
+      slab.position.set(rx, 0.35, rz);
+      slab.rotation.z = tilt;
+      slab.castShadow = true;
+      this.group.add(slab);
 
+      for (let r = -1.5; r <= 1.5; r += 1.0) {
+        const rebar = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.08, 0.08), rebarMat);
+        rebar.position.set(rx + r, 0.5, rz + 1.4);
+        rebar.rotation.y = r * 0.2;
+        this.group.add(rebar);
+      }
+    });
+
+    // Barreiras de concreto e bloqueios militares na ponte
     const blockades: [number, number, number, number, number][] = [
       [-14, -10, 5.5, 1.3, 1.4],
       [14, 10, 5.5, 1.3, 1.4],
@@ -2866,16 +2914,20 @@ export class Environment {
     ];
     blockades.forEach(([x, z, w, h, d]) => addBarrier(x, z, w, h, d, concreteMat));
 
-    // Carcaças de veículos engarrafados/destruídos
-    const wrecks: [number, number, number][] = [
-      [-18, -24, 0.2], [20, -6, -0.35], [-16, 18, 0.45],
-      [18, 26, -0.15], [-32, 4, 0.1], [32, -28, 0.3],
+    // Carcaças de veículos engarrafados/destruídos (com giroflex em viatura)
+    const wreckMat = new THREE.MeshStandardMaterial({ color: 0x451a1a, roughness: 0.8, metalness: 0.35 });
+    const policeMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6, metalness: 0.4 });
+    const cabMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.75, metalness: 0.4 });
+
+    const wrecks: [number, number, number, boolean][] = [
+      [-18, -24, 0.2, false], [20, -6, -0.35, true], [-16, 18, 0.45, false],
+      [18, 26, -0.15, false], [-32, 4, 0.1, true], [32, -28, 0.3, false],
     ];
-    wrecks.forEach(([x, z, rot]) => {
+    wrecks.forEach(([x, z, rot, isPolice]) => {
       const car = new THREE.Group();
       car.position.set(x, 0, z);
       car.rotation.y = rot;
-      const body = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.1, 2.1), wreckMat);
+      const body = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.1, 2.1), isPolice ? policeMat : wreckMat);
       body.position.y = 0.65;
       body.castShadow = true;
       car.add(body);
@@ -2883,15 +2935,42 @@ export class Environment {
       cabin.position.set(-0.2, 1.55, 0);
       cabin.castShadow = true;
       car.add(cabin);
+
+      if (isPolice) {
+        const sirenMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+        const siren = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.9), sirenMat);
+        siren.position.set(-0.2, 2.05, 0);
+        car.add(siren);
+        this.animatedSirens.push({ mat: sirenMat, colA: 0x38bdf8, colB: 0xef4444, timer: x * 0.1 });
+      }
+
       this.group.add(car);
       this.obstacles.push(new THREE.Box3().setFromObject(car));
     });
 
+    // Postes de iluminação da ponte (alguns inclinados)
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.5, roughness: 0.6 });
+    [[-36, -42, 0], [0, -42, 0.12], [36, 42, -0.1], [-12, 42, 0]].forEach(([px, pz, tilt]) => {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 6.5, 6), poleMat);
+      pole.position.set(px, 3.25, pz);
+      pole.rotation.z = tilt;
+      this.group.add(pole);
+    });
+
     // Barris em chamas iluminando a travessia
-    const fireLight = new THREE.PointLight(0xf97316, 2.5, 22, 1.4);
-    fireLight.position.set(-10, 2.2, -10);
-    this.group.add(fireLight);
-    this.animatedFires.push({ light: fireLight, baseIntensity: 2.5, phase: 1.2 });
+    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.75, metalness: 0.4 });
+    [[-10, -10], [12, 12]].forEach(([bx, bz], idx) => {
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.2, 8), barrelMat);
+      barrel.position.set(bx, 0.6, bz);
+      barrel.castShadow = true;
+      this.group.add(barrel);
+      this.obstacles.push(new THREE.Box3().setFromObject(barrel));
+
+      const fireLight = new THREE.PointLight(0xf97316, 2.5, 22, 1.4);
+      fireLight.position.set(bx, 2.0, bz);
+      this.group.add(fireLight);
+      this.animatedFires.push({ light: fireLight, baseIntensity: 2.5, phase: idx * 1.7 });
+    });
   }
 
   // ==========================================
