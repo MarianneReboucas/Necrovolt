@@ -159,6 +159,8 @@ export class ZombieManager {
   }
 
   // Gera inimigos de forma segura fora da visão, vindo de becos e avenidas
+  private currentStageNumber: number = 1;
+
   public spawnSafeZombie(
     obstacles: THREE.Box3[],
     playerPos: THREE.Vector3,
@@ -166,6 +168,7 @@ export class ZombieManager {
     stageNumber: number = 1,
     camera?: THREE.Camera
   ): boolean {
+    this.currentStageNumber = stageNumber;
     const bounds = GAME_CONFIG.arena.bounds - 4;
 
     let attempts = 0;
@@ -816,6 +819,12 @@ export class ZombieManager {
               z.group.position.z += t.z;
               break;
             }
+          }
+
+          // Garante que na Ponte (Fases 5-8) nenhum zumbi seja empurrado para fora da pista
+          if (this.currentStageNumber >= 5 && this.currentStageNumber <= 8) {
+            z.group.position.x = Math.max(-10.8, Math.min(10.8, z.group.position.x));
+            z.group.position.z = Math.max(-44.5, Math.min(44.5, z.group.position.z));
           }
         }
 

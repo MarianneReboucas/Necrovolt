@@ -2804,16 +2804,29 @@ export class Environment {
     const bridgeHemi = new THREE.HemisphereLight(0xe0f2fe, 0x334155, 0.95);
     this.group.add(bridgeHemi);
 
-    // Rio visível fora da ponte
+    // Lago visível fora da ponte (azul-água nítido com brilho suave)
     const waterMat = new THREE.MeshStandardMaterial({
-      color: 0x0c3547,
-      roughness: 0.25,
-      metalness: 0.5,
+      color: 0x1d6fa5,
+      emissive: 0x0b3b5c,
+      emissiveIntensity: 0.55,
+      roughness: 0.2,
+      metalness: 0.45,
     });
     const water = new THREE.Mesh(new THREE.PlaneGeometry(360, 360), waterMat);
     water.rotation.x = -Math.PI / 2;
-    water.position.y = -3.2;
+    water.position.y = -2.8;
     this.group.add(water);
+
+    // Reflexos/ondulações claras na superfície do lago
+    const rippleMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.22 });
+    for (let rz = -80; rz <= 80; rz += 22) {
+      [-32, 32].forEach((rx) => {
+        const ripple = new THREE.Mesh(new THREE.PlaneGeometry(18, 1.2), rippleMat);
+        ripple.rotation.x = -Math.PI / 2;
+        ripple.position.set(rx, -2.75, rz);
+        this.group.add(ripple);
+      });
+    }
 
     // Tabuleiro estreito da ponte (24m de largura x 140m de comprimento no eixo Z)
     const asphaltMat = new THREE.MeshStandardMaterial({
