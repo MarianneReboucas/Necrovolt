@@ -178,11 +178,23 @@ export class ZombieManager {
       let z = 0;
 
       const isBridgeStage = stageNumber >= 5 && stageNumber <= 8;
+      const isSewerStage = stageNumber >= 9 && stageNumber <= 12;
       if (isBridgeStage) {
         // Ponte estreita (Tier 2 - Fases 5 a 8): zumbis nascem estritamente dentro da pista [-9.5, 9.5]
         x = (Math.random() - 0.5) * 18;
         const dir = Math.random() < 0.65 ? -1 : 1;
         z = playerPos.z + dir * (22 + Math.random() * 16);
+      } else if (isSewerStage) {
+        // Esgoto (Tier 3 - Fases 9 a 12): nasce apenas nas passarelas abertas da área de combate
+        const sewerNodes = [
+          { x: -24, z: -36 }, { x: 24, z: -36 },
+          { x: -24, z: 36 }, { x: 24, z: 36 },
+          { x: -24, z: 4 }, { x: 24, z: -4 },
+          { x: 0, z: -30 }, { x: 0, z: 30 },
+        ];
+        const chosen = sewerNodes[Math.floor(Math.random() * sewerNodes.length)];
+        x = chosen.x + (Math.random() - 0.5) * 4.0;
+        z = chosen.z + (Math.random() - 0.5) * 4.0;
       } else {
         // 50% de chance: vir de nós urbanos temáticos (becos, bueiros distantes, avenidas)
         // 50% de chance: vir pelas vias e calçadas periféricas fora da tela
@@ -206,14 +218,13 @@ export class ZombieManager {
         }
       }
 
-      const isSewerStage = stageNumber >= 9 && stageNumber <= 12;
       x = isBridgeStage
         ? Math.max(-9.5, Math.min(9.5, x))
         : isSewerStage
-          ? Math.max(-43, Math.min(43, x))
+          ? Math.max(-41, Math.min(41, x))
           : Math.max(-bounds, Math.min(bounds, x));
       z = isBridgeStage || isSewerStage
-        ? Math.max(-43, Math.min(43, z))
+        ? Math.max(-41, Math.min(41, z))
         : Math.max(-bounds, Math.min(bounds, z));
 
       // Garante que NUNCA brote visível na tela
