@@ -3217,17 +3217,17 @@ export class Environment {
     concreteTex.wrapT = THREE.RepeatWrapping;
     concreteTex.repeat.set(6, 6);
 
-    // Iluminação industrial equilibrada (amarelada + esverdeada)
-    const sewerHemi = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.9);
+    // Iluminação ambiente azul-fria bem visível e legível
+    const sewerHemi = new THREE.HemisphereLight(0x93c5fd, 0x1e293b, 1.15);
     this.group.add(sewerHemi);
 
-    // 2. Canal Principal de Esgoto (água escura, suja e com reflexo discreto)
+    // 2. Água rasa e turva em tom verde-oliva com reflexo na superfície
     const sewerWaterMat = new THREE.MeshStandardMaterial({
-      color: 0x182621,
-      emissive: 0x0a1712,
-      emissiveIntensity: 0.4,
+      color: 0x3b4d2b,
+      emissive: 0x1a2612,
+      emissiveIntensity: 0.45,
       roughness: 0.14,
-      metalness: 0.72,
+      metalness: 0.65,
     });
     const waterFloor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), sewerWaterMat);
     waterFloor.rotation.x = -Math.PI / 2;
@@ -3279,14 +3279,13 @@ export class Environment {
       this.group.add(mesh);
     });
 
-    // Grades metálicas nas bordas das passarelas sobre o canal
+    // Leve espuma nas bordas das passarelas sobre a água verde-oliva
+    const foamMat = new THREE.MeshBasicMaterial({ color: 0xa3b899, transparent: true, opacity: 0.25 });
     [-11.2, 11.2].forEach((gx) => {
-      [-15, 15].forEach((gz) => {
-        const grate = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.28, 18), grateMat);
-        grate.position.set(gx, 0.02, gz);
-        grate.receiveShadow = true;
-        this.group.add(grate);
-      });
+      const foam = new THREE.Mesh(new THREE.PlaneGeometry(0.65, 90), foamMat);
+      foam.rotation.x = -Math.PI / 2;
+      foam.position.set(gx, -0.11, 0);
+      this.group.add(foam);
     });
 
     const addSolid = (x: number, y: number, z: number, w: number, h: number, d: number, mat: THREE.Material) => {
@@ -3357,11 +3356,18 @@ export class Environment {
       this.group.add(rail);
     });
 
-    // Vigas de aço enferrujado cruzando o teto
-    [-30, -10, 10, 30].forEach((bz) => {
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(92, 0.85, 0.9), rustMat);
-      beam.position.set(0, 7.1, bz);
-      this.group.add(beam);
+    // Feixes de luz suaves entrando por bueiros ao alto (sem barras atravessando a tela)
+    const shaftMat = new THREE.MeshBasicMaterial({
+      color: 0xbae6fd,
+      transparent: true,
+      opacity: 0.08,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    [-22, 0, 22].forEach((sz) => {
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 4.2, 11, 12, 1, true), shaftMat);
+      shaft.position.set(0, 5.5, sz);
+      this.group.add(shaft);
     });
 
     // 8. Tubulações de várias espessuras nas paredes e escadas de manutenção
