@@ -3217,17 +3217,29 @@ export class Environment {
     concreteTex.wrapT = THREE.RepeatWrapping;
     concreteTex.repeat.set(6, 6);
 
-    // Iluminação ambiente azul-fria bem visível e legível
-    const sewerHemi = new THREE.HemisphereLight(0x93c5fd, 0x1e293b, 1.15);
+    // Iluminação ambiente azul-fria suave e legível
+    const sewerHemi = new THREE.HemisphereLight(0x93c5fd, 0x1c1917, 0.95);
     this.group.add(sewerHemi);
 
-    // 2. Água rasa e turva em tom verde-oliva com reflexo na superfície
+    // 2. Fundo do canal visível por baixo da água + Água semitransparente verde-oliva escura
+    const canalBedMat = new THREE.MeshStandardMaterial({
+      color: 0x1c1e1a,
+      roughness: 0.95,
+    });
+    const canalBed = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), canalBedMat);
+    canalBed.rotation.x = -Math.PI / 2;
+    canalBed.position.y = -0.38;
+    canalBed.receiveShadow = true;
+    this.group.add(canalBed);
+
     const sewerWaterMat = new THREE.MeshStandardMaterial({
-      color: 0x3b4d2b,
-      emissive: 0x1a2612,
-      emissiveIntensity: 0.45,
-      roughness: 0.14,
-      metalness: 0.65,
+      color: 0x2a381e,
+      emissive: 0x0d1408,
+      emissiveIntensity: 0.25,
+      roughness: 0.08,
+      metalness: 0.8,
+      transparent: true,
+      opacity: 0.72,
     });
     const waterFloor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), sewerWaterMat);
     waterFloor.rotation.x = -Math.PI / 2;
@@ -3235,18 +3247,18 @@ export class Environment {
     waterFloor.receiveShadow = true;
     this.group.add(waterFloor);
 
-    // Materiais industriais compartilhados
+    // Materiais industriais compartilhados (concreto cinza-escuro desgastado e tijolos úmidos)
     const concreteMat = new THREE.MeshStandardMaterial({
       map: concreteTex,
-      color: 0x525b61,
-      roughness: 0.88,
-      metalness: 0.08,
+      color: 0x45484a,
+      roughness: 0.9,
+      metalness: 0.05,
     });
     const wallMat = new THREE.MeshStandardMaterial({
       map: concreteTex,
-      color: 0x3b4348,
-      roughness: 0.9,
-      metalness: 0.1,
+      color: 0x323538,
+      roughness: 0.92,
+      metalness: 0.08,
     });
     const rustMat = new THREE.MeshStandardMaterial({
       color: 0x6b2f1b,
@@ -3279,12 +3291,16 @@ export class Environment {
       this.group.add(mesh);
     });
 
-    // Leve espuma nas bordas das passarelas sobre a água verde-oliva
-    const foamMat = new THREE.MeshBasicMaterial({ color: 0xa3b899, transparent: true, opacity: 0.25 });
+    // Muretas baixas na borda do canal + linhas sutis de espuma
+    const foamMat = new THREE.MeshBasicMaterial({ color: 0xa3b899, transparent: true, opacity: 0.2 });
     [-11.2, 11.2].forEach((gx) => {
-      const foam = new THREE.Mesh(new THREE.PlaneGeometry(0.65, 90), foamMat);
+      const curb = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 92), concreteMat);
+      curb.position.set(gx, 0.18, 0);
+      this.group.add(curb);
+
+      const foam = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 90), foamMat);
       foam.rotation.x = -Math.PI / 2;
-      foam.position.set(gx, -0.11, 0);
+      foam.position.set(gx + (gx < 0 ? 0.4 : -0.4), -0.12, 0);
       this.group.add(foam);
     });
 
@@ -3356,11 +3372,11 @@ export class Environment {
       this.group.add(rail);
     });
 
-    // Feixes de luz suaves entrando por bueiros ao alto (sem barras atravessando a tela)
+    // Feixes de luz suaves do teto (opacidade reduzida para penumbra sutil)
     const shaftMat = new THREE.MeshBasicMaterial({
       color: 0xbae6fd,
       transparent: true,
-      opacity: 0.08,
+      opacity: 0.035,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
@@ -3407,23 +3423,18 @@ export class Environment {
       addSolid(cx, 0.85, cz, 1.7, 1.5, 1.7, crateMat);
     });
 
-    // 10. Luminárias fluorescentes (amareladas e esverdeadas) otimizadas (apenas 3 PointLights)
-    const warmLampMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
-    const greenLampMat = new THREE.MeshBasicMaterial({ color: 0x86efac });
+    // 10. Luminárias quentes (âmbar) nas paredes
+    const amberLampMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
 
-    [-28, 0, 28].forEach((lz, idx) => {
-      const isGreen = idx === 1;
+    [-28, 0, 28].forEach((lz) => {
       [-45.4, 45.4].forEach((lx) => {
-        const fixture = new THREE.Mesh(
-          new THREE.BoxGeometry(0.3, 0.35, 2.6),
-          isGreen ? greenLampMat : warmLampMat
-        );
-        fixture.position.set(lx, 5.8, lz);
+        const fixture = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.35, 2.2), amberLampMat);
+        fixture.position.set(lx, 5.2, lz);
         this.group.add(fixture);
       });
 
-      const light = new THREE.PointLight(isGreen ? 0x4ade80 : 0xfef3c7, 2.2, 36, 1.2);
-      light.position.set(0, 6.0, lz);
+      const light = new THREE.PointLight(0xf59e0b, 2.0, 34, 1.3);
+      light.position.set(0, 5.6, lz);
       this.group.add(light);
     });
   }
