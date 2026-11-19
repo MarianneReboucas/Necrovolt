@@ -680,6 +680,9 @@ class Game {
     this.progression.addXp(currentStage.rewards.xp);
     this.progression.addCoins(currentStage.rewards.coins);
     this.progression.recordStageCleared(currentStage.stageNumber);
+    if (!this.stageManager.isLastStage()) {
+      this.progression.setCurrentSavedStage(currentStage.stageNumber + 1);
+    }
 
     if (!this.tookDamageThisStage) {
       this.progression.recordFlawlessStage();
