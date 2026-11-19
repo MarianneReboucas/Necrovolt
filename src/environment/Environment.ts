@@ -310,27 +310,28 @@ export class Environment {
 
   private buildMapForStage(stageNumber: number): void {
     // TIER 1 (Fases 1 a 4 - "O Início do Surto"): inteiro na Cidade Abandonada
-    if (stageNumber === 5) {
+    // TIER 2 (Fases 5 a 8 - "A Contaminação se Espalha"): inteiro na Ponte Estreita
+    if (stageNumber >= 5 && stageNumber <= 8) {
       this.buildBridgeMap(stageNumber);
       this.buildStageTraps(stageNumber);
       return;
     }
-    if (stageNumber === 6) {
+    if (stageNumber >= 9 && stageNumber <= 12) {
       this.buildForestMap(stageNumber);
       this.buildStageTraps(stageNumber);
       return;
     }
-    if (stageNumber === 7) {
+    if (stageNumber >= 13 && stageNumber <= 16) {
       this.buildFarmMap(stageNumber);
       this.buildStageTraps(stageNumber);
       return;
     }
-    if (stageNumber === 8) {
+    if (stageNumber >= 17 && stageNumber <= 20) {
       this.buildMilitaryCampMap(stageNumber);
       this.buildStageTraps(stageNumber);
       return;
     }
-    if (stageNumber >= 9) {
+    if (stageNumber >= 21) {
       this.buildIndustrialMap(stageNumber);
       this.buildStageTraps(stageNumber);
       return;
