@@ -2608,8 +2608,8 @@ export class Environment {
   // CENÁRIO TESTE FASE 3: FLORESTA SOMBRIA
   // ==========================================
   private buildForestMap(_stageNumber: number): void {
-    // 1. Solo da Floresta (Musgo e Terra Úmida)
-    const groundGeo = new THREE.PlaneGeometry(140, 140);
+    // 1. Solo da Floresta Ampliada (Musgo e Terra Úmida)
+    const groundGeo = new THREE.PlaneGeometry(240, 240);
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x162617,
       roughness: 0.95,
@@ -2708,13 +2708,14 @@ export class Environment {
       }
     };
 
-    // 2. Borda densa da arena florestal (mantém jogador e zumbis dentro de [-46, 46])
-    for (let i = -46; i <= 46; i += 4.5) {
-      spawnPineTree(i, -47, 1.15 + (Math.abs(i) % 3) * 0.1, true);
-      spawnPineTree(i, 47, 1.15 + (Math.abs(i + 1) % 3) * 0.1, true);
-      spawnPineTree(-47, i, 1.15 + (Math.abs(i + 2) % 3) * 0.1, true);
-      spawnPineTree(47, i, 1.15 + (Math.abs(i) % 3) * 0.1, true);
-    }
+    // 2. Floresta aberta e ampliada (sem paredes fechando o mapa), com árvores espalhadas até o horizonte
+    const outerTrees: [number, number, number][] = [
+      [-55, -52, 1.2], [-68, -30, 1.1], [-72, 12, 1.25], [-58, 48, 1.15],
+      [55, -50, 1.15], [70, -24, 1.2], [65, 18, 1.1], [54, 52, 1.25],
+      [-28, -62, 1.2], [18, -66, 1.15], [-22, 64, 1.1], [26, 60, 1.2],
+      [-80, -65, 1.3], [78, -62, 1.25], [-76, 68, 1.2], [80, 66, 1.3],
+    ];
+    outerTrees.forEach(([x, z, s]) => spawnPineTree(x, z, s, true));
 
     // 3. Árvores internas espalhadas (preservando a clareira central e as trilhas)
     const treePositions: [number, number, number][] = [
