@@ -839,12 +839,9 @@ export class ZombieManager {
             }
           }
 
-          // Garante que na Ponte (Fases 5-8) ou no Esgoto (Fases 9-12) nenhum zumbi fique atrás das paredes
+          // Garante que na Ponte (Fases 5-8) nenhum zumbi saia da pista
           if (this.currentStageNumber >= 5 && this.currentStageNumber <= 8) {
             z.group.position.x = Math.max(-10.8, Math.min(10.8, z.group.position.x));
-            z.group.position.z = Math.max(-44.5, Math.min(44.5, z.group.position.z));
-          } else if (this.currentStageNumber >= 9 && this.currentStageNumber <= 12) {
-            z.group.position.x = Math.max(-44.5, Math.min(44.5, z.group.position.x));
             z.group.position.z = Math.max(-44.5, Math.min(44.5, z.group.position.z));
           }
         }

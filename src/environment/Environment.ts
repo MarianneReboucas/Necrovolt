@@ -3226,7 +3226,7 @@ export class Environment {
       color: 0x1c1e1a,
       roughness: 0.95,
     });
-    const canalBed = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), canalBedMat);
+    const canalBed = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), canalBedMat);
     canalBed.rotation.x = -Math.PI / 2;
     canalBed.position.y = -0.38;
     canalBed.receiveShadow = true;
@@ -3241,7 +3241,7 @@ export class Environment {
       transparent: true,
       opacity: 0.72,
     });
-    const waterFloor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), sewerWaterMat);
+    const waterFloor = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), sewerWaterMat);
     waterFloor.rotation.x = -Math.PI / 2;
     waterFloor.position.y = -0.14;
     waterFloor.receiveShadow = true;
@@ -3276,13 +3276,13 @@ export class Environment {
       metalness: 0.75,
     });
 
-    // 3. Passarelas laterais, plataformas e pontes sobre o canal principal
+    // 3. Passarelas laterais, plataformas e pontes expandidas sobre o canal principal
     const walkways: [number, number, number, number, number][] = [
-      [-28, 0, 34, 0.24, 92],  // Ala Oeste (Sala de Bombas)
-      [28, 0, 34, 0.24, 92],   // Ala Leste (Galeria de Válvulas)
-      [0, -30, 30, 0.24, 9],   // Ponte Norte
-      [0, 0, 30, 0.24, 9],     // Ponte Central
-      [0, 30, 30, 0.24, 9],    // Ponte Sul
+      [-28, 0, 34, 0.24, 180],  // Ala Oeste expandida
+      [28, 0, 34, 0.24, 180],   // Ala Leste expandida
+      [0, -30, 30, 0.24, 9],    // Ponte Norte
+      [0, 0, 30, 0.24, 9],      // Ponte Central
+      [0, 30, 30, 0.24, 9],     // Ponte Sul
     ];
     walkways.forEach(([x, z, w, h, d]) => {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), concreteMat);
