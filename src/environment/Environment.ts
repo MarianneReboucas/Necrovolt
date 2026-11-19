@@ -311,27 +311,33 @@ export class Environment {
   private buildMapForStage(stageNumber: number): void {
     // TIER 1 (Fases 1 a 4 - "O Início do Surto"): inteiro na Cidade Abandonada
     // TIER 2 (Fases 5 a 8 - "A Contaminação se Espalha"): inteiro na Ponte Estreita
+    // TIER 3 (Fases 9 a 12 - "Zona Tóxica Subterrânea"): inteiro no Esgoto Subterrâneo
     if (stageNumber >= 5 && stageNumber <= 8) {
       this.buildBridgeMap(stageNumber);
       this.buildStageTraps(stageNumber);
       return;
     }
     if (stageNumber >= 9 && stageNumber <= 12) {
-      this.buildForestMap(stageNumber);
+      this.buildSewerMap(stageNumber);
       this.buildStageTraps(stageNumber);
       return;
     }
     if (stageNumber >= 13 && stageNumber <= 16) {
-      this.buildFarmMap(stageNumber);
+      this.buildForestMap(stageNumber);
       this.buildStageTraps(stageNumber);
       return;
     }
     if (stageNumber >= 17 && stageNumber <= 20) {
+      this.buildFarmMap(stageNumber);
+      this.buildStageTraps(stageNumber);
+      return;
+    }
+    if (stageNumber >= 21 && stageNumber <= 24) {
       this.buildMilitaryCampMap(stageNumber);
       this.buildStageTraps(stageNumber);
       return;
     }
-    if (stageNumber >= 21) {
+    if (stageNumber >= 25) {
       this.buildIndustrialMap(stageNumber);
       this.buildStageTraps(stageNumber);
       return;
@@ -3170,6 +3176,93 @@ export class Environment {
     const toxicLight = new THREE.PointLight(0x22c55e, 2.5, 22, 1.4);
     toxicLight.position.set(0, 4, 0);
     this.group.add(toxicLight);
+  }
+
+  // ==========================================
+  // TIER 3 (FASES 9-12): ESGOTO SUBTERRÂNEO
+  // ==========================================
+  private buildSewerMap(_stageNumber: number): void {
+    // Iluminação esverdeada úmida de túnel subterrâneo
+    const sewerHemi = new THREE.HemisphereLight(0x4ade80, 0x0f172a, 0.55);
+    this.group.add(sewerHemi);
+
+    // Piso principal de concreto úmido
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0x1e2621,
+      roughness: 0.78,
+      metalness: 0.12,
+    });
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), floorMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.group.add(ground);
+
+    // Canal central de esgoto com água tóxica esverdeada (atravessável pelas pontes/passarelas)
+    const sewerWaterMat = new THREE.MeshBasicMaterial({ color: 0x15803d });
+    const channel = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 92), sewerWaterMat);
+    channel.rotation.x = -Math.PI / 2;
+    channel.position.set(0, 0.015, 0);
+    this.group.add(channel);
+
+    // Passarelas de concreto cruzando o canal de esgoto
+    const walkwayMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.85 });
+    [-28, 0, 28].forEach((wz) => {
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(8.5, 0.18, 5.5), walkwayMat);
+      bridge.position.set(0, 0.09, wz);
+      bridge.receiveShadow = true;
+      this.group.add(bridge);
+    });
+
+    // Paredes de tijolos úmidos e pilares do túnel subterrâneo
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x2a362c, roughness: 0.9 });
+    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.65, metalness: 0.5 });
+
+    const addSewerBlock = (x: number, z: number, w: number, h: number, d: number, mat: THREE.Material = wallMat) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      mesh.position.set(x, h / 2, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      this.group.add(mesh);
+      this.obstacles.push(new THREE.Box3().setFromObject(mesh));
+    };
+
+    // Bordas do subterrâneo [-47, 47]
+    addSewerBlock(0, -47, 96, 5.5, 2);
+    addSewerBlock(0, 47, 96, 5.5, 2);
+    addSewerBlock(-47, 0, 2, 5.5, 96);
+    addSewerBlock(47, 0, 2, 5.5, 96);
+
+    // Pilares de concreto e galerias internas
+    const pillars: [number, number][] = [
+      [-14, -18], [14, -18], [-14, 18], [14, 18],
+      [-28, -28], [28, -28], [-28, 28], [28, 28],
+      [-26, 0], [26, 0],
+    ];
+    pillars.forEach(([px, pz]) => {
+      addSewerBlock(px, pz, 2.8, 5.5, 2.8, wallMat);
+    });
+
+    // Tubulações enferrujadas nas laterais e válvulas
+    [-45.2, 45.2].forEach((px) => {
+      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 90, 8), pipeMat);
+      pipe.rotation.x = Math.PI / 2;
+      pipe.position.set(px, 3.2, 0);
+      this.group.add(pipe);
+    });
+
+    // Luminárias fluorescentes esverdeadas nas paredes
+    const lampMat = new THREE.MeshBasicMaterial({ color: 0x86efac });
+    [-24, 0, 24].forEach((lz) => {
+      [-45.8, 45.8].forEach((lx) => {
+        const fixture = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.45, 2.2), lampMat);
+        fixture.position.set(lx, 3.8, lz);
+        this.group.add(fixture);
+      });
+
+      const greenLight = new THREE.PointLight(0x4ade80, 2.0, 26, 1.4);
+      greenLight.position.set(0, 4.5, lz);
+      this.group.add(greenLight);
+    });
   }
 
   private distancePointToSegment2D(px: number, pz: number, x1: number, z1: number, x2: number, z2: number): number {
