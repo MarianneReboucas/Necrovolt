@@ -3193,40 +3193,48 @@ export class Environment {
   // TIER 3 (FASES 9-12): ESGOTO SUBTERRÂNEO
   // ==========================================
   private buildSewerMap(_stageNumber: number): void {
-    // Iluminação esverdeada úmida de túnel subterrâneo
-    const sewerHemi = new THREE.HemisphereLight(0x4ade80, 0x0f172a, 0.55);
+    // Iluminação mais clara para o esgoto ficar bem visível
+    const sewerHemi = new THREE.HemisphereLight(0xe2e8f0, 0x334155, 1.15);
     this.group.add(sewerHemi);
 
-    // Piso principal de concreto úmido
-    const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x1e2621,
-      roughness: 0.78,
-      metalness: 0.12,
+    // Água turva do esgoto cobrindo o nível inferior
+    const sewerWaterMat = new THREE.MeshStandardMaterial({
+      color: 0x4b423f,
+      emissive: 0x1c1917,
+      emissiveIntensity: 0.35,
+      roughness: 0.25,
+      metalness: 0.45,
     });
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), floorMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    this.group.add(ground);
+    const waterFloor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), sewerWaterMat);
+    waterFloor.rotation.x = -Math.PI / 2;
+    waterFloor.position.y = -0.08;
+    waterFloor.receiveShadow = true;
+    this.group.add(waterFloor);
 
-    // Canal central de esgoto com água tóxica esverdeada (atravessável pelas pontes/passarelas)
-    const sewerWaterMat = new THREE.MeshBasicMaterial({ color: 0x15803d });
-    const channel = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 92), sewerWaterMat);
-    channel.rotation.x = -Math.PI / 2;
-    channel.position.set(0, 0.015, 0);
-    this.group.add(channel);
-
-    // Passarelas de concreto cruzando o canal de esgoto
-    const walkwayMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.85 });
-    [-28, 0, 28].forEach((wz) => {
-      const bridge = new THREE.Mesh(new THREE.BoxGeometry(8.5, 0.18, 5.5), walkwayMat);
-      bridge.position.set(0, 0.09, wz);
-      bridge.receiveShadow = true;
-      this.group.add(bridge);
+    // Calçadas/plataformas elevadas de concreto (como na referência)
+    const concreteMat = new THREE.MeshStandardMaterial({
+      color: 0x4b5563,
+      roughness: 0.85,
+      metalness: 0.08,
+    });
+    const platforms: [number, number, number, number][] = [
+      [0, 0, 18, 92],     // Passarela central
+      [-26, 0, 20, 92],   // Plataforma esquerda
+      [26, 0, 20, 92],    // Plataforma direita
+      [0, -28, 72, 10],   // Ponte transversal norte
+      [0, 0, 72, 10],     // Ponte transversal central
+      [0, 28, 72, 10],    // Ponte transversal sul
+    ];
+    platforms.forEach(([px, pz, pw, pd]) => {
+      const plat = new THREE.Mesh(new THREE.BoxGeometry(pw, 0.22, pd), concreteMat);
+      plat.position.set(px, 0.02, pz);
+      plat.receiveShadow = true;
+      this.group.add(plat);
     });
 
-    // Paredes de tijolos úmidos e pilares do túnel subterrâneo
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x2a362c, roughness: 0.9 });
-    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.65, metalness: 0.5 });
+    // Paredes de alvenaria/concreto e arcos do túnel fechado
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.88 });
+    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.6, metalness: 0.5 });
 
     const addSewerBlock = (x: number, z: number, w: number, h: number, d: number, mat: THREE.Material = wallMat) => {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -3237,42 +3245,59 @@ export class Environment {
       this.obstacles.push(new THREE.Box3().setFromObject(mesh));
     };
 
-    // Bordas do subterrâneo [-47, 47]
-    addSewerBlock(0, -47, 96, 5.5, 2);
-    addSewerBlock(0, 47, 96, 5.5, 2);
-    addSewerBlock(-47, 0, 2, 5.5, 96);
-    addSewerBlock(47, 0, 2, 5.5, 96);
+    // Bordas fechadas do esgoto [-47, 47]
+    addSewerBlock(0, -47, 96, 6.5, 2.2);
+    addSewerBlock(0, 47, 96, 6.5, 2.2);
+    addSewerBlock(-47, 0, 2.2, 6.5, 96);
+    addSewerBlock(47, 0, 2.2, 6.5, 96);
 
-    // Pilares de concreto e galerias internas
+    // Pilares grossos de sustentação e galerias internas
     const pillars: [number, number][] = [
-      [-14, -18], [14, -18], [-14, 18], [14, 18],
-      [-28, -28], [28, -28], [-28, 28], [28, 28],
-      [-26, 0], [26, 0],
+      [-16, -16], [16, -16], [-16, 16], [16, 16],
+      [-34, -22], [34, -22], [-34, 22], [34, 22],
     ];
     pillars.forEach(([px, pz]) => {
-      addSewerBlock(px, pz, 2.8, 5.5, 2.8, wallMat);
+      addSewerBlock(px, pz, 3.4, 6.5, 3.4, wallMat);
     });
 
-    // Tubulações enferrujadas nas laterais e válvulas
-    [-45.2, 45.2].forEach((px) => {
-      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 90, 8), pipeMat);
+    // Vigas/arcos superiores dando sensação de ambiente subterrâneo fechado
+    const archMat = new THREE.MeshStandardMaterial({ color: 0x29303b, roughness: 0.9 });
+    [-32, -16, 16, 32].forEach((az) => {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(92, 1.2, 1.8), archMat);
+      beam.position.set(0, 6.8, az);
+      this.group.add(beam);
+    });
+
+    // Tubulações suspensas e laterais
+    [-45.0, 45.0].forEach((px) => {
+      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 90, 8), pipeMat);
       pipe.rotation.x = Math.PI / 2;
-      pipe.position.set(px, 3.2, 0);
+      pipe.position.set(px, 3.6, 0);
       this.group.add(pipe);
     });
 
-    // Luminárias fluorescentes esverdeadas nas paredes
-    const lampMat = new THREE.MeshBasicMaterial({ color: 0x86efac });
-    [-24, 0, 24].forEach((lz) => {
-      [-45.8, 45.8].forEach((lx) => {
-        const fixture = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.45, 2.2), lampMat);
-        fixture.position.set(lx, 3.8, lz);
+    // Tonéis/galões agrupados nos cantos das plataformas (como na foto de referência)
+    const drumMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.65, metalness: 0.25 });
+    [[-13.5, -15], [13.5, 15], [-13.5, 17]].forEach(([dx, dz]) => {
+      const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.25, 10), drumMat);
+      drum.position.set(dx, 0.72, dz);
+      drum.castShadow = true;
+      this.group.add(drum);
+      this.obstacles.push(new THREE.Box3().setFromObject(drum));
+    });
+
+    // Luminárias industriais claras iluminando todo o esgoto
+    const lampMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    [-26, 0, 26].forEach((lz) => {
+      [-45.5, 45.5].forEach((lx) => {
+        const fixture = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.45, 2.4), lampMat);
+        fixture.position.set(lx, 4.2, lz);
         this.group.add(fixture);
       });
 
-      const greenLight = new THREE.PointLight(0x4ade80, 2.0, 26, 1.4);
-      greenLight.position.set(0, 4.5, lz);
-      this.group.add(greenLight);
+      const warmLight = new THREE.PointLight(0xfef3c7, 2.4, 34, 1.2);
+      warmLight.position.set(0, 5.2, lz);
+      this.group.add(warmLight);
     });
   }
 
