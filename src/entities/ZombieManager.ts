@@ -174,8 +174,8 @@ export class ZombieManager {
       let x = 0;
       let z = 0;
 
-      if (stageNumber === 2) {
-        // Ponte estreita: zumbis nascem estritamente dentro da pista [-9.5, 9.5] à frente ou atrás do jogador
+      if (stageNumber === 5) {
+        // Ponte estreita (Fase 5): zumbis nascem estritamente dentro da pista [-9.5, 9.5] à frente ou atrás do jogador
         x = (Math.random() - 0.5) * 18;
         const dir = Math.random() < 0.65 ? -1 : 1;
         z = playerPos.z + dir * (22 + Math.random() * 16);
@@ -202,7 +202,7 @@ export class ZombieManager {
         }
       }
 
-      x = stageNumber === 2 ? Math.max(-9.5, Math.min(9.5, x)) : Math.max(-bounds, Math.min(bounds, x));
+      x = stageNumber === 5 ? Math.max(-9.5, Math.min(9.5, x)) : Math.max(-bounds, Math.min(bounds, x));
       z = Math.max(-bounds, Math.min(bounds, z));
 
       // Garante que NUNCA brote visível na tela
