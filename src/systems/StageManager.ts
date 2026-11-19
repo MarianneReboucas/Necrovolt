@@ -56,11 +56,11 @@ export class StageManager {
   }
 
   // Registra uma eliminação real de zumbi
-  public recordKill(isBoss: boolean = false): boolean {
+  public recordKill(isBoss: boolean = false, killWeight: number = 1): boolean {
     if (this.isStageCompleted) return false;
 
-    this.stageKills++;
-    this.totalKills++;
+    this.stageKills += killWeight;
+    this.totalKills += killWeight;
 
     if (isBoss) {
       this.bossDefeated = true;

@@ -464,7 +464,8 @@ class Game {
             this.progression.recordBossDefeated();
           }
 
-          const stageFinished = this.stageManager.recordKill(confirmedDeadZombie.type === 'boss');
+          const killWeight = confirmedDeadZombie.type === 'brute' || confirmedDeadZombie.type === 'boss' ? 2 : 1;
+          const stageFinished = this.stageManager.recordKill(confirmedDeadZombie.type === 'boss', killWeight);
 
           if (stageFinished) {
             this.handleStageCleared();
@@ -500,7 +501,8 @@ class Game {
                 this.progression.recordBossDefeated();
               }
 
-              const stageFinished = this.stageManager.recordKill(confirmedDeadZombie.type === 'boss');
+              const killWeight = confirmedDeadZombie.type === 'brute' || confirmedDeadZombie.type === 'boss' ? 2 : 1;
+          const stageFinished = this.stageManager.recordKill(confirmedDeadZombie.type === 'boss', killWeight);
               if (stageFinished) {
                 this.handleStageCleared();
               }
@@ -547,7 +549,8 @@ class Game {
             this.progression.recordBossDefeated();
           }
 
-          const stageFinished = this.stageManager.recordKill(explodedZombie.type === 'boss');
+          const killWeight = explodedZombie.type === 'brute' || explodedZombie.type === 'boss' ? 2 : 1;
+          const stageFinished = this.stageManager.recordKill(explodedZombie.type === 'boss', killWeight);
           if (stageFinished) {
             this.handleStageCleared();
           }
@@ -631,7 +634,8 @@ class Game {
             this.progression.addCoins(Math.round(zConf.xpValue * 0.5));
             this.progression.recordKillAchievement();
             if (killed.type === 'boss') this.progression.recordBossDefeated();
-            const stageFinished = this.stageManager.recordKill(killed.type === 'boss');
+            const killWeight = killed.type === 'brute' || killed.type === 'boss' ? 2 : 1;
+            const stageFinished = this.stageManager.recordKill(killed.type === 'boss', killWeight);
             if (stageFinished) this.handleStageCleared();
           }
         );
