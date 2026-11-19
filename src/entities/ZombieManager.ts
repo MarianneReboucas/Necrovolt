@@ -206,8 +206,15 @@ export class ZombieManager {
         }
       }
 
-      x = isBridgeStage ? Math.max(-9.5, Math.min(9.5, x)) : Math.max(-bounds, Math.min(bounds, x));
-      z = isBridgeStage ? Math.max(-43, Math.min(43, z)) : Math.max(-bounds, Math.min(bounds, z));
+      const isSewerStage = stageNumber >= 9 && stageNumber <= 12;
+      x = isBridgeStage
+        ? Math.max(-9.5, Math.min(9.5, x))
+        : isSewerStage
+          ? Math.max(-43, Math.min(43, x))
+          : Math.max(-bounds, Math.min(bounds, x));
+      z = isBridgeStage || isSewerStage
+        ? Math.max(-43, Math.min(43, z))
+        : Math.max(-bounds, Math.min(bounds, z));
 
       // Garante que NUNCA brote visível na tela
       if (this.isPointVisible(x, z, camera)) {
@@ -821,9 +828,12 @@ export class ZombieManager {
             }
           }
 
-          // Garante que na Ponte (Fases 5-8) nenhum zumbi seja empurrado para fora da pista
+          // Garante que na Ponte (Fases 5-8) ou no Esgoto (Fases 9-12) nenhum zumbi fique atrás das paredes
           if (this.currentStageNumber >= 5 && this.currentStageNumber <= 8) {
             z.group.position.x = Math.max(-10.8, Math.min(10.8, z.group.position.x));
+            z.group.position.z = Math.max(-44.5, Math.min(44.5, z.group.position.z));
+          } else if (this.currentStageNumber >= 9 && this.currentStageNumber <= 12) {
+            z.group.position.x = Math.max(-44.5, Math.min(44.5, z.group.position.x));
             z.group.position.z = Math.max(-44.5, Math.min(44.5, z.group.position.z));
           }
         }
