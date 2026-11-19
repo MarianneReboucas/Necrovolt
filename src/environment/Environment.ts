@@ -2804,15 +2804,15 @@ export class Environment {
     const bridgeHemi = new THREE.HemisphereLight(0xe0f2fe, 0x334155, 0.95);
     this.group.add(bridgeHemi);
 
-    // Rio escuro abaixo da ponte
+    // Rio visível fora da ponte
     const waterMat = new THREE.MeshStandardMaterial({
-      color: 0x0f293a,
+      color: 0x0c3547,
       roughness: 0.25,
-      metalness: 0.55,
+      metalness: 0.5,
     });
-    const water = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), waterMat);
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(360, 360), waterMat);
     water.rotation.x = -Math.PI / 2;
-    water.position.y = -3.8;
+    water.position.y = -3.2;
     this.group.add(water);
 
     // Tabuleiro estreito da ponte (24m de largura x 140m de comprimento no eixo Z)
@@ -2845,14 +2845,11 @@ export class Environment {
       this.obstacles.push(new THREE.Box3().setFromObject(mesh));
     };
 
-    // Paredes laterais e extremidades da ponte (mantém jogador e zumbis dentro da ponte)
+    // Paredes laterais da ponte (mantém jogador e zumbis dentro da pista, sem paredes bloqueando os finais)
     const steelRedMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.65, metalness: 0.4 });
-    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x7c8594, roughness: 0.88 });
 
     addBarrier(-12.5, 0, 1.2, 2.4, 140, steelRedMat);
     addBarrier(12.5, 0, 1.2, 2.4, 140, steelRedMat);
-    addBarrier(0, -47, 25, 2.0, 1.5, concreteMat);
-    addBarrier(0, 47, 25, 2.0, 1.5, concreteMat);
 
     // Treliças metálicas vermelhas/ferrugem nas laterais da ponte (como na foto de referência)
     const pillarGeo = new THREE.BoxGeometry(0.65, 8.5, 0.65);
