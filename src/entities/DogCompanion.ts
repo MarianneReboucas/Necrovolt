@@ -233,7 +233,8 @@ export class DogCompanion {
     aliveZombies: ZombieInstance[],
     onAttack: (zombie: ZombieInstance, damage: number) => void,
     onBark?: () => void,
-    onBite?: () => void
+    onBite?: () => void,
+    obstacles: THREE.Box3[] = []
   ): void {
     if (this.biteCooldown > 0) {
       this.biteCooldown -= delta;
@@ -344,8 +345,36 @@ export class DogCompanion {
 
     if (isMoving) {
       const step = Math.min(distToTarget, moveSpeed * delta);
-      this.group.position.x += (dx / distToTarget) * step;
-      this.group.position.z += (dz / distToTarget) * step;
+      const nextX = this.group.position.x + (dx / distToTarget) * step;
+      const nextZ = this.group.position.z + (dz / distToTarget) * step;
+
+      // Colisão leve do cão com paredes e obstáculos (evita atravessar paredes sem pesar o FPS)
+      const dogRadius = 0.45;
+      let blockedX = false;
+      let blockedZ = false;
+      for (let i = 0; i < obstacles.length; i++) {
+        const box = obstacles[i];
+        if (
+          nextX + dogRadius > box.min.x &&
+          nextX - dogRadius < box.max.x &&
+          this.group.position.z + dogRadius > box.min.z &&
+          this.group.position.z - dogRadius < box.max.z
+        ) {
+          blockedX = true;
+        }
+        if (
+          this.group.position.x + dogRadius > box.min.x &&
+          this.group.position.x - dogRadius < box.max.x &&
+          nextZ + dogRadius > box.min.z &&
+          nextZ - dogRadius < box.max.z
+        ) {
+          blockedZ = true;
+        }
+        if (blockedX && blockedZ) break;
+      }
+
+      if (!blockedX) this.group.position.x = nextX;
+      if (!blockedZ) this.group.position.z = nextZ;
 
       // Animação de trote / corrida canina
       this.walkTime += delta * 16.0;

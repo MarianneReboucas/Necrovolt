@@ -512,7 +512,8 @@ class Game {
         },
         () => {
           this.sfx.playDogBite();
-        }
+        },
+        this.environment.obstacles
       );
 
       // 9. Atualização dos Zumbis
