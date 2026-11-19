@@ -2845,11 +2845,14 @@ export class Environment {
       this.obstacles.push(new THREE.Box3().setFromObject(mesh));
     };
 
-    // Paredes laterais da ponte (mantém jogador e zumbis dentro da pista, sem paredes bloqueando os finais)
+    // Paredes laterais e meio-fio baixo nas extremidades (mantém jogador e zumbis dentro da ponte sem bloquear os tiros)
     const steelRedMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.65, metalness: 0.4 });
+    const curbMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.85 });
 
     addBarrier(-12.5, 0, 1.2, 2.4, 140, steelRedMat);
     addBarrier(12.5, 0, 1.2, 2.4, 140, steelRedMat);
+    addBarrier(0, -46, 25, 0.55, 1.5, curbMat);
+    addBarrier(0, 46, 25, 0.55, 1.5, curbMat);
 
     // Treliças metálicas vermelhas/ferrugem nas laterais da ponte (como na foto de referência)
     const pillarGeo = new THREE.BoxGeometry(0.65, 8.5, 0.65);

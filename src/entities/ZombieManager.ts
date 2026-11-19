@@ -204,7 +204,7 @@ export class ZombieManager {
       }
 
       x = isBridgeStage ? Math.max(-9.5, Math.min(9.5, x)) : Math.max(-bounds, Math.min(bounds, x));
-      z = Math.max(-bounds, Math.min(bounds, z));
+      z = isBridgeStage ? Math.max(-43, Math.min(43, z)) : Math.max(-bounds, Math.min(bounds, z));
 
       // Garante que NUNCA brote visível na tela
       if (this.isPointVisible(x, z, camera)) {
