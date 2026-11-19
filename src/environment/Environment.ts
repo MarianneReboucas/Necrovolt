@@ -3190,114 +3190,235 @@ export class Environment {
   }
 
   // ==========================================
-  // TIER 3 (FASES 9-12): ESGOTO SUBTERRÂNEO
+  // TIER 3 (FASES 9-12): ESGOTO INDUSTRIAL SUBTERRÂNEO
   // ==========================================
   private buildSewerMap(_stageNumber: number): void {
-    // Iluminação mais clara para o esgoto ficar bem visível
-    const sewerHemi = new THREE.HemisphereLight(0xe2e8f0, 0x334155, 1.15);
+    // 1. Texturas procedurais leves para concreto úmido e água suja
+    const concreteCanvas = document.createElement('canvas');
+    concreteCanvas.width = 128;
+    concreteCanvas.height = 128;
+    const cCtx = concreteCanvas.getContext('2d')!;
+    cCtx.fillStyle = '#3f474d';
+    cCtx.fillRect(0, 0, 128, 128);
+    // Manchas de umidade, sujeira e rachaduras
+    for (let i = 0; i < 28; i++) {
+      cCtx.fillStyle = i % 2 === 0 ? 'rgba(20, 28, 24, 0.35)' : 'rgba(72, 82, 76, 0.25)';
+      cCtx.fillRect((i * 37) % 110, (i * 53) % 110, 18 + (i % 15), 14 + (i % 20));
+    }
+    cCtx.strokeStyle = 'rgba(15, 20, 22, 0.6)';
+    cCtx.lineWidth = 1.5;
+    cCtx.beginPath();
+    cCtx.moveTo(12, 20); cCtx.lineTo(48, 52); cCtx.lineTo(75, 48);
+    cCtx.moveTo(80, 90); cCtx.lineTo(112, 115);
+    cCtx.stroke();
+
+    const concreteTex = new THREE.CanvasTexture(concreteCanvas);
+    concreteTex.wrapS = THREE.RepeatWrapping;
+    concreteTex.wrapT = THREE.RepeatWrapping;
+    concreteTex.repeat.set(6, 6);
+
+    // Iluminação industrial equilibrada (amarelada + esverdeada)
+    const sewerHemi = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.9);
     this.group.add(sewerHemi);
 
-    // Água turva do esgoto cobrindo o nível inferior
+    // 2. Canal Principal de Esgoto (água escura, suja e com reflexo discreto)
     const sewerWaterMat = new THREE.MeshStandardMaterial({
-      color: 0x4b423f,
-      emissive: 0x1c1917,
-      emissiveIntensity: 0.35,
-      roughness: 0.25,
-      metalness: 0.45,
+      color: 0x182621,
+      emissive: 0x0a1712,
+      emissiveIntensity: 0.4,
+      roughness: 0.14,
+      metalness: 0.72,
     });
     const waterFloor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), sewerWaterMat);
     waterFloor.rotation.x = -Math.PI / 2;
-    waterFloor.position.y = -0.08;
+    waterFloor.position.y = -0.14;
     waterFloor.receiveShadow = true;
     this.group.add(waterFloor);
 
-    // Calçadas/plataformas elevadas de concreto (como na referência)
+    // Materiais industriais compartilhados
     const concreteMat = new THREE.MeshStandardMaterial({
-      color: 0x4b5563,
-      roughness: 0.85,
+      map: concreteTex,
+      color: 0x525b61,
+      roughness: 0.88,
       metalness: 0.08,
     });
-    const platforms: [number, number, number, number][] = [
-      [0, 0, 18, 92],     // Passarela central
-      [-26, 0, 20, 92],   // Plataforma esquerda
-      [26, 0, 20, 92],    // Plataforma direita
-      [0, -28, 72, 10],   // Ponte transversal norte
-      [0, 0, 72, 10],     // Ponte transversal central
-      [0, 28, 72, 10],    // Ponte transversal sul
-    ];
-    platforms.forEach(([px, pz, pw, pd]) => {
-      const plat = new THREE.Mesh(new THREE.BoxGeometry(pw, 0.22, pd), concreteMat);
-      plat.position.set(px, 0.02, pz);
-      plat.receiveShadow = true;
-      this.group.add(plat);
+    const wallMat = new THREE.MeshStandardMaterial({
+      map: concreteTex,
+      color: 0x3b4348,
+      roughness: 0.9,
+      metalness: 0.1,
+    });
+    const rustMat = new THREE.MeshStandardMaterial({
+      color: 0x6b2f1b,
+      roughness: 0.72,
+      metalness: 0.55,
+    });
+    const darkMetalMat = new THREE.MeshStandardMaterial({
+      color: 0x262d33,
+      roughness: 0.6,
+      metalness: 0.65,
+    });
+    const grateMat = new THREE.MeshStandardMaterial({
+      color: 0x333c42,
+      roughness: 0.55,
+      metalness: 0.75,
     });
 
-    // Paredes de alvenaria/concreto e arcos do túnel fechado
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.88 });
-    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.6, metalness: 0.5 });
+    // 3. Passarelas laterais, plataformas e pontes sobre o canal principal
+    const walkways: [number, number, number, number, number][] = [
+      [-28, 0, 34, 0.24, 92],  // Ala Oeste (Sala de Bombas)
+      [28, 0, 34, 0.24, 92],   // Ala Leste (Galeria de Válvulas)
+      [0, -30, 30, 0.24, 9],   // Ponte Norte
+      [0, 0, 30, 0.24, 9],     // Ponte Central
+      [0, 30, 30, 0.24, 9],    // Ponte Sul
+    ];
+    walkways.forEach(([x, z, w, h, d]) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), concreteMat);
+      mesh.position.set(x, 0.0, z);
+      mesh.receiveShadow = true;
+      this.group.add(mesh);
+    });
 
-    const addSewerBlock = (x: number, z: number, w: number, h: number, d: number, mat: THREE.Material = wallMat) => {
+    // Grades metálicas nas bordas das passarelas sobre o canal
+    [-11.2, 11.2].forEach((gx) => {
+      [-15, 15].forEach((gz) => {
+        const grate = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.28, 18), grateMat);
+        grate.position.set(gx, 0.02, gz);
+        grate.receiveShadow = true;
+        this.group.add(grate);
+      });
+    });
+
+    const addSolid = (x: number, y: number, z: number, w: number, h: number, d: number, mat: THREE.Material) => {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-      mesh.position.set(x, h / 2, z);
+      mesh.position.set(x, y, z);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       this.group.add(mesh);
       this.obstacles.push(new THREE.Box3().setFromObject(mesh));
     };
 
-    // Bordas fechadas do esgoto [-47, 47]
-    addSewerBlock(0, -47, 96, 6.5, 2.2);
-    addSewerBlock(0, 47, 96, 6.5, 2.2);
-    addSewerBlock(-47, 0, 2.2, 6.5, 96);
-    addSewerBlock(47, 0, 2.2, 6.5, 96);
+    // 4. Paredes perimetrais do esgoto [-47, 47]
+    addSolid(0, 3.5, -47, 96, 7.0, 2.2, wallMat);
+    addSolid(0, 3.5, 47, 96, 7.0, 2.2, wallMat);
+    addSolid(-47, 3.5, 0, 2.2, 7.0, 96, wallMat);
+    addSolid(47, 3.5, 0, 2.2, 7.0, 96, wallMat);
 
-    // Pilares grossos de sustentação e galerias internas
-    const pillars: [number, number][] = [
-      [-16, -16], [16, -16], [-16, 16], [16, 16],
-      [-34, -22], [34, -22], [-34, 22], [34, 22],
-    ];
-    pillars.forEach(([px, pz]) => {
-      addSewerBlock(px, pz, 3.4, 6.5, 3.4, wallMat);
+    // 5. Grandes Túneis Circulares com Grades (como na imagem de referência)
+    const tunnelRingGeo = new THREE.TorusGeometry(3.2, 0.45, 8, 20);
+    const tunnelVoidGeo = new THREE.CircleGeometry(3.0, 20);
+    const tunnelVoidMat = new THREE.MeshBasicMaterial({ color: 0x050809 });
+    const barGeo = new THREE.BoxGeometry(0.14, 5.8, 0.14);
+
+    [-28, 0, 28].forEach((tz) => {
+      [-45.6, 45.6].forEach((tx) => {
+        const rotY = tx < 0 ? Math.PI / 2 : -Math.PI / 2;
+        const ring = new THREE.Mesh(tunnelRingGeo, rustMat);
+        ring.position.set(tx, 3.0, tz);
+        ring.rotation.y = rotY;
+        this.group.add(ring);
+
+        const voidMesh = new THREE.Mesh(tunnelVoidGeo, tunnelVoidMat);
+        voidMesh.position.set(tx + (tx < 0 ? 0.1 : -0.1), 3.0, tz);
+        voidMesh.rotation.y = rotY;
+        this.group.add(voidMesh);
+
+        // Barras da grade do túnel
+        for (let b = -2.0; b <= 2.0; b += 1.0) {
+          const bar = new THREE.Mesh(barGeo, darkMetalMat);
+          bar.position.set(tx + (tx < 0 ? 0.25 : -0.25), 3.0, tz + b);
+          this.group.add(bar);
+        }
+      });
     });
 
-    // Vigas/arcos superiores dando sensação de ambiente subterrâneo fechado
-    const archMat = new THREE.MeshStandardMaterial({ color: 0x29303b, roughness: 0.9 });
-    [-32, -16, 16, 32].forEach((az) => {
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(92, 1.2, 1.8), archMat);
-      beam.position.set(0, 6.8, az);
+    // 6. Corredores secundários, pilares estruturais e passagens em arco
+    const pillars: [number, number][] = [
+      [-15, -16], [15, -16], [-15, 16], [15, 16],
+      [-32, -20], [32, -20], [-32, 20], [32, 20],
+    ];
+    pillars.forEach(([px, pz]) => {
+      addSolid(px, 3.5, pz, 2.8, 7.0, 2.8, wallMat);
+    });
+
+    // Divisórias criando salas/corredores distintos nas alas laterais
+    addSolid(-28, 2.8, -12, 10, 5.6, 1.6, wallMat);
+    addSolid(28, 2.8, 12, 10, 5.6, 1.6, wallMat);
+
+    // 7. Passarelas elevadas (mezaninos) e vigas metálicas no teto
+    const catwalkY = 3.8;
+    [-42.5, 42.5].forEach((cx) => {
+      const catwalk = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.25, 88), grateMat);
+      catwalk.position.set(cx, catwalkY, 0);
+      this.group.add(catwalk);
+
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.0, 88), rustMat);
+      rail.position.set(cx + (cx < 0 ? 2.6 : -2.6), catwalkY + 0.6, 0);
+      this.group.add(rail);
+    });
+
+    // Vigas de aço enferrujado cruzando o teto
+    [-30, -10, 10, 30].forEach((bz) => {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(92, 0.85, 0.9), rustMat);
+      beam.position.set(0, 7.1, bz);
       this.group.add(beam);
     });
 
-    // Tubulações suspensas e laterais
+    // 8. Tubulações de várias espessuras nas paredes e escadas de manutenção
     [-45.0, 45.0].forEach((px) => {
-      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 90, 8), pipeMat);
-      pipe.rotation.x = Math.PI / 2;
-      pipe.position.set(px, 3.6, 0);
-      this.group.add(pipe);
+      const thickPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 90, 8), rustMat);
+      thickPipe.rotation.x = Math.PI / 2;
+      thickPipe.position.set(px, 5.2, 0);
+      this.group.add(thickPipe);
+
+      const thinPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 90, 6), darkMetalMat);
+      thinPipe.rotation.x = Math.PI / 2;
+      thinPipe.position.set(px + (px < 0 ? 0.5 : -0.5), 4.2, 0);
+      this.group.add(thinPipe);
     });
 
-    // Tonéis/galões agrupados nos cantos das plataformas (como na foto de referência)
-    const drumMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.65, metalness: 0.25 });
-    [[-13.5, -15], [13.5, 15], [-13.5, 17]].forEach(([dx, dz]) => {
-      const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.25, 10), drumMat);
-      drum.position.set(dx, 0.72, dz);
-      drum.castShadow = true;
-      this.group.add(drum);
-      this.obstacles.push(new THREE.Box3().setFromObject(drum));
+    // Escadas de manutenção metálicas encostadas nos pilares
+    [[-13.5, -16], [13.5, 16]].forEach(([lx, lz]) => {
+      const ladder = new THREE.Mesh(new THREE.BoxGeometry(0.15, 4.2, 0.9), darkMetalMat);
+      ladder.position.set(lx, 2.1, lz);
+      this.group.add(ladder);
     });
 
-    // Luminárias industriais claras iluminando todo o esgoto
-    const lampMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
-    [-26, 0, 26].forEach((lz) => {
-      [-45.5, 45.5].forEach((lx) => {
-        const fixture = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.45, 2.4), lampMat);
-        fixture.position.set(lx, 4.2, lz);
+    // 9. Barris enferrujados, caixas abandonadas e válvulas industriais
+    const barrelSpots: [number, number][] = [
+      [-18, -26], [-19.2, -25.2], [18, 25], [19.2, 26], [-36, 12], [35, -14],
+    ];
+    barrelSpots.forEach(([bx, bz]) => {
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.25, 10), rustMat);
+      barrel.position.set(bx, 0.74, bz);
+      barrel.castShadow = true;
+      this.group.add(barrel);
+      this.obstacles.push(new THREE.Box3().setFromObject(barrel));
+    });
+
+    const crateMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 });
+    [[-22, 24], [22, -24], [-36, -6], [36, 6]].forEach(([cx, cz]) => {
+      addSolid(cx, 0.85, cz, 1.7, 1.5, 1.7, crateMat);
+    });
+
+    // 10. Luminárias fluorescentes (amareladas e esverdeadas) otimizadas (apenas 3 PointLights)
+    const warmLampMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const greenLampMat = new THREE.MeshBasicMaterial({ color: 0x86efac });
+
+    [-28, 0, 28].forEach((lz, idx) => {
+      const isGreen = idx === 1;
+      [-45.4, 45.4].forEach((lx) => {
+        const fixture = new THREE.Mesh(
+          new THREE.BoxGeometry(0.3, 0.35, 2.6),
+          isGreen ? greenLampMat : warmLampMat
+        );
+        fixture.position.set(lx, 5.8, lz);
         this.group.add(fixture);
       });
 
-      const warmLight = new THREE.PointLight(0xfef3c7, 2.4, 34, 1.2);
-      warmLight.position.set(0, 5.2, lz);
-      this.group.add(warmLight);
+      const light = new THREE.PointLight(isGreen ? 0x4ade80 : 0xfef3c7, 2.2, 36, 1.2);
+      light.position.set(0, 6.0, lz);
+      this.group.add(light);
     });
   }
 
