@@ -3276,10 +3276,10 @@ export class Environment {
       metalness: 0.75,
     });
 
-    // 3. Passarelas laterais, plataformas e pontes expandidas sobre o canal principal
+    // 3. Passarelas laterais e pontes expandidas cobrindo toda a área sem vãos pretos
     const walkways: [number, number, number, number, number][] = [
-      [-28, 0, 34, 0.24, 180],  // Ala Oeste expandida
-      [28, 0, 34, 0.24, 180],   // Ala Leste expandida
+      [-48, 0, 74, 0.24, 220],  // Ala Oeste expandida até a borda
+      [48, 0, 74, 0.24, 220],   // Ala Leste expandida até a borda
       [0, -30, 30, 0.24, 9],    // Ponte Norte
       [0, 0, 30, 0.24, 9],      // Ponte Central
       [0, 30, 30, 0.24, 9],     // Ponte Sul
@@ -3315,32 +3315,17 @@ export class Environment {
 
     // Mapa de esgoto aberto (sem paredes fechando o cenário)
 
-    // 5. Grandes Túneis Circulares com Grades (como na imagem de referência)
-    const tunnelRingGeo = new THREE.TorusGeometry(3.2, 0.45, 8, 20);
-    const tunnelVoidGeo = new THREE.CircleGeometry(3.0, 20);
-    const tunnelVoidMat = new THREE.MeshBasicMaterial({ color: 0x050809 });
-    const barGeo = new THREE.BoxGeometry(0.14, 5.8, 0.14);
+    // 5. Tubulações expandidas ao longo das bordas externas (sem anéis flutuando no meio)
+    [-82, 82].forEach((px) => {
+      const thickPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 220, 8), rustMat);
+      thickPipe.rotation.x = Math.PI / 2;
+      thickPipe.position.set(px, 2.2, 0);
+      this.group.add(thickPipe);
 
-    [-28, 0, 28].forEach((tz) => {
-      [-45.6, 45.6].forEach((tx) => {
-        const rotY = tx < 0 ? Math.PI / 2 : -Math.PI / 2;
-        const ring = new THREE.Mesh(tunnelRingGeo, rustMat);
-        ring.position.set(tx, 3.0, tz);
-        ring.rotation.y = rotY;
-        this.group.add(ring);
-
-        const voidMesh = new THREE.Mesh(tunnelVoidGeo, tunnelVoidMat);
-        voidMesh.position.set(tx + (tx < 0 ? 0.1 : -0.1), 3.0, tz);
-        voidMesh.rotation.y = rotY;
-        this.group.add(voidMesh);
-
-        // Barras da grade do túnel
-        for (let b = -2.0; b <= 2.0; b += 1.0) {
-          const bar = new THREE.Mesh(barGeo, darkMetalMat);
-          bar.position.set(tx + (tx < 0 ? 0.25 : -0.25), 3.0, tz + b);
-          this.group.add(bar);
-        }
-      });
+      const thinPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 220, 6), darkMetalMat);
+      thinPipe.rotation.x = Math.PI / 2;
+      thinPipe.position.set(px + (px < 0 ? 0.65 : -0.65), 1.3, 0);
+      this.group.add(thinPipe);
     });
 
     // 6. Corredores secundários, pilares estruturais e passagens em arco
@@ -3354,14 +3339,14 @@ export class Environment {
 
     // Área de combate aberta nas alas laterais (sem paredes divisórias)
 
-    // 7. Passarelas elevadas (mezaninos) e vigas metálicas no teto
+    // 7. Passarelas elevadas (mezaninos) nas bordas externas
     const catwalkY = 3.8;
-    [-42.5, 42.5].forEach((cx) => {
-      const catwalk = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.25, 88), grateMat);
+    [-80, 80].forEach((cx) => {
+      const catwalk = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.25, 220), grateMat);
       catwalk.position.set(cx, catwalkY, 0);
       this.group.add(catwalk);
 
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.0, 88), rustMat);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.0, 220), rustMat);
       rail.position.set(cx + (cx < 0 ? 2.6 : -2.6), catwalkY + 0.6, 0);
       this.group.add(rail);
     });
@@ -3378,19 +3363,6 @@ export class Environment {
       const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 4.2, 11, 12, 1, true), shaftMat);
       shaft.position.set(0, 5.5, sz);
       this.group.add(shaft);
-    });
-
-    // 8. Tubulações de várias espessuras nas paredes e escadas de manutenção
-    [-45.0, 45.0].forEach((px) => {
-      const thickPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 90, 8), rustMat);
-      thickPipe.rotation.x = Math.PI / 2;
-      thickPipe.position.set(px, 5.2, 0);
-      this.group.add(thickPipe);
-
-      const thinPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 90, 6), darkMetalMat);
-      thinPipe.rotation.x = Math.PI / 2;
-      thinPipe.position.set(px + (px < 0 ? 0.5 : -0.5), 4.2, 0);
-      this.group.add(thinPipe);
     });
 
     // Escadas de manutenção metálicas encostadas nos pilares
