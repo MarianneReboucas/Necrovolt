@@ -3313,11 +3313,7 @@ export class Environment {
       this.obstacles.push(new THREE.Box3().setFromObject(mesh));
     };
 
-    // 4. Paredes perimetrais do esgoto [-47, 47]
-    addSolid(0, 3.5, -47, 96, 7.0, 2.2, wallMat);
-    addSolid(0, 3.5, 47, 96, 7.0, 2.2, wallMat);
-    addSolid(-47, 3.5, 0, 2.2, 7.0, 96, wallMat);
-    addSolid(47, 3.5, 0, 2.2, 7.0, 96, wallMat);
+    // Mapa de esgoto aberto (sem paredes fechando o cenário)
 
     // 5. Grandes Túneis Circulares com Grades (como na imagem de referência)
     const tunnelRingGeo = new THREE.TorusGeometry(3.2, 0.45, 8, 20);
@@ -3356,9 +3352,7 @@ export class Environment {
       addSolid(px, 3.5, pz, 2.8, 7.0, 2.8, wallMat);
     });
 
-    // Divisórias criando salas/corredores distintos nas alas laterais
-    addSolid(-28, 2.8, -12, 10, 5.6, 1.6, wallMat);
-    addSolid(28, 2.8, 12, 10, 5.6, 1.6, wallMat);
+    // Área de combate aberta nas alas laterais (sem paredes divisórias)
 
     // 7. Passarelas elevadas (mezaninos) e vigas metálicas no teto
     const catwalkY = 3.8;
